@@ -6,7 +6,7 @@ import (
 	"math"
 )
 
-func arrayManipulation(n int32, queries [][]int32) int64 {
+func arrayManipulationIterative(n int32, queries [][]int32) int64 {
 
 	// 24 Points, 7 test cases failed due to timeout
 
@@ -28,6 +28,46 @@ func arrayManipulation(n int32, queries [][]int32) int64 {
 	}
 
 	return max
+}
+
+func arrayManipulation(n int32, queries [][]int32) int64 {
+	// Try #2: Most Wanted Number
+	// Timeouts + 3 wrong answers
+
+	var max, result int64 = 0, 0
+	res := make([]int64, n+1)
+
+	var i int32 = 1
+	var imax int32 = 0
+
+	for i = 1; i <= n+1; i++ {
+
+		for _, q := range queries {
+
+			if i >= q[0] && i <= q[1] {
+				res[i]++
+			}
+
+		}
+
+	}
+
+	for i, v := range res {
+		if max < v {
+			max = v
+			imax = int32(i)
+		}
+	}
+
+	for _, q := range queries {
+
+		if int32(imax) >= q[0] && int32(imax) <= q[1] {
+			result += int64(q[2])
+		}
+
+	}
+
+	return result
 }
 
 func main() {
