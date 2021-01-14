@@ -4,10 +4,10 @@ import (
 	"fmt"
 )
 
-func minimumBribesBubble(q []int32) {
+func minimumBribes(q []int32) {
+
 	for i, v := range q {
 		if (v - int32(i+1)) > 2 {
-			// fmt.Println(v, i)
 			fmt.Println("Too chaotic")
 			return
 		}
@@ -24,38 +24,6 @@ func minimumBribesBubble(q []int32) {
 				q[i+1] = t
 				bribes++
 				bribed = 1
-				break
-			}
-		}
-	}
-
-	fmt.Println(bribes)
-	// fmt.Println("Too chaotic")
-}
-
-func minimumBribes(q []int32) {
-
-	for i, v := range q {
-		if (v - int32(i+1)) > 2 {
-			// fmt.Println(v, i)
-			fmt.Println("Too chaotic")
-			return
-		}
-	}
-
-	bribes := 0
-	bribed := 1
-	for bribed != 0 {
-		bribed = 0
-		for i := 0; i < len(q)-1; i++ {
-
-			if q[i] > q[i+1] {
-				t := q[i]
-				q[i] = q[i+1]
-				q[i+1] = t
-				bribes++
-				bribed = 1
-				// break
 			}
 		}
 	}
