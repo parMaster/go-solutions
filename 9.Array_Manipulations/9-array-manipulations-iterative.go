@@ -8,7 +8,7 @@ import (
 
 func arrayManipulationIterative(n int32, queries [][]int32) int64 {
 
-	// 24 Points, 7 test cases failed due to timeout
+	// 24 Points, 7 test cases failed due to timeout (7-13)
 
 	var max int64 = 0
 	res := make([]int64, n)
@@ -30,7 +30,7 @@ func arrayManipulationIterative(n int32, queries [][]int32) int64 {
 	return max
 }
 
-func arrayManipulation(n int32, queries [][]int32) int64 {
+func arrayManipulationMostWanted(n int32, queries [][]int32) int64 {
 	// Try #2: Most Wanted Number
 	// Timeouts + 3 wrong answers
 
@@ -70,9 +70,40 @@ func arrayManipulation(n int32, queries [][]int32) int64 {
 	return result
 }
 
+func arrayManipulation(n int32, queries [][]int32) int64 {
+	// Try #3: N+M version
+
+	var max, accumulated int64 = 0, 0
+	res := make([]int64, n+2)
+
+	// Let's do O(M)
+	for _, q := range queries {
+
+		a, b, k := q[0], q[1], int64(q[2])
+
+		res[a] += k
+		res[b+1] -= k
+	}
+
+	// So, for this case:
+	// 2 6 8
+	// 3 5 7
+	// 1 8 1
+	// 5 9 15
+	// res will look like:
+	// [0 1 8 7 0 15 -7 -8 0 -1 -15 0]
+
+	// Now we do O(N) and find max accumulated value
+	for _, v := range res {
+		accumulated += v
+		max = int64(math.Max(float64(max), float64(accumulated)))
+	}
+
+	return max
+}
+
 func main() {
 
-	// fmt.Println(arrayManipulation(10, [][]int32{{1, 5, 3}, {4, 8, 7}, {6, 9, 1}}))
 	fmt.Println(arrayManipulation(10, [][]int32{{2, 6, 8}, {3, 5, 7}, {1, 8, 1}, {5, 9, 15}}))
 
 }
