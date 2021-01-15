@@ -2,8 +2,7 @@ package main
 
 func matchingStrings(strings []string, queries []string) []int32 {
 
-	var m map[string]int32
-	m = make(map[string]int32)
+	m := make(map[string]int32)
 
 	for _, str := range strings {
 		m[str]++
