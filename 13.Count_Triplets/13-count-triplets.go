@@ -55,7 +55,8 @@ func countTriplets(arr []int64, r int64) int64 {
 func main() {
 
 	// fmt.Println(countTriplets([]int64{1, 2, 2, 4}, 2))
-	fmt.Println(countTriplets([]int64{1, 3, 9, 9, 27, 81}, 3))
+	// fmt.Println(countTriplets([]int64{1, 3, 9, 9, 27, 81}, 3))
 	// fmt.Println(countTriplets([]int64{1, 5, 5, 25, 125}, 5))
+	fmt.Println(countTriplets([]int64{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, 1))
 
 }
