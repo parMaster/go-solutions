@@ -32,6 +32,8 @@ var testsQsort = []casesQsort{
 
 var tests = []cases{
 	{[]int32{10, 20, 30, 40, 50}, 3, 1},
+	{[]int32{2, 3, 4, 2, 3, 6, 8, 4, 5}, 5, 2},
+	{[]int32{1, 2, 3, 4, 4}, 4, 0},
 }
 
 func TestMedian(t *testing.T) {
