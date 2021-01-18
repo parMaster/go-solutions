@@ -5,7 +5,7 @@ import (
 )
 
 type casesMedian struct {
-	a        []int32
+	a        []int
 	expected float32
 }
 
@@ -21,10 +21,10 @@ type cases struct {
 }
 
 var testsMedian = []casesMedian{
-	{[]int32{0}, float32(0)},
-	{[]int32{0, 1}, float32(0.5)},
-	{[]int32{1, 2, 3, 4}, float32(2.5)},
-	{[]int32{1, 2, 3, 4, 5}, 3},
+	{[]int{0}, float32(0)},
+	{[]int{0, 1}, float32(0.5)},
+	{[]int{1, 2, 3, 4}, float32(2.5)},
+	{[]int{1, 2, 3, 4, 5}, 3},
 }
 
 var testsQsort = []casesQsort{
