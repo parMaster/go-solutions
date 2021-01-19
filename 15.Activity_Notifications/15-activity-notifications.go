@@ -1,89 +1,70 @@
 package main
 
 import (
-	"fmt"
+	"math"
 	"math/rand"
-	"sort"
 )
 
 func main() {
 	//
-
-	x := []int{1, 2, 3, 3, 3, 3, 4, 5}
-	pos := sort.SearchInts(x, 3)
-
-	fmt.Println(pos)
-	fmt.Println(x[:pos])
-	fmt.Println(x[pos:len(x)])
-
 }
 
-func activityNotifications(e32 []int32, d int32) int32 {
+func activityNotifications(e []int32, d int32) int32 {
 
 	var result int32 = 0
-	var e []int
-	// var max int32
-
-	priorDays := quicksort(e32[0:d])
-
-	// sort.SearchInts takes []int    8-/
-	e = make([]int, len(priorDays))
-	for i := range priorDays {
-		e[i] = int(priorDays[i])
+	// countsort first d values
+	cs := make([]int, 201)
+	for i := 0; i < int(d); i++ {
+		cs[int(e[i])]++
 	}
 
-	// since 1 <= d <= n
-	if len(e32) == int(d) {
-		return result
-	}
+	for i := int(d); i < len(e); i++ {
 
-	for i := d; i < int32(len(e32)); i++ {
-
-		if e32[i] >= int32(2*median(e)) {
-
-			// fmt.Println("Element e32[", i, "] = ", e32[i], " med = ", median(e), " 2*med = ", 2*median(e), " len(e) = ", len(e))
-
+		dm := doubleMedian(cs, d)
+		if e[i] >= dm {
 			result++
 		}
 
-		e = delete(e, e32[i-d])
-		e = insert(e, int(e32[i]))
+		cs[int(e[i])]++
+		cs[e[i-int(d)]]--
+
 	}
-	// fmt.Println(result)
+
 	return result
 }
 
-func delete(a []int, e32 int32) []int {
+// Let's find a double median in countsorted array, since it's a problem`s condition
+// and I don't need to use float - 2*(a/2) is always int!
+func doubleMedian(cs []int, d int32) int32 {
 
-	e := int(e32)
+	var result int32 = 0
+	var thereYet int = 0
 
-	pos := sort.SearchInts(a, e)
+	halfD := int(math.Floor(float64(d / 2.0)))
 
-	if 0 == pos {
-		return a[1:len(a)]
+	if 0 == d%2 {
+		for i := 0; i < 201; i++ {
+			thereYet += cs[i]
+			if 0 == result && thereYet >= halfD {
+				result = int32(i)
+			}
+			if thereYet >= halfD+1 {
+				return result + int32(i)
+			}
+		}
 	}
 
-	if len(a) == pos {
-		return a[:len(a)]
+	for i := 0; i < 201; i++ {
+		thereYet += cs[i]
+		if thereYet > halfD {
+			return int32(2 * i)
+		}
 	}
 
-	return append(a[:pos], a[pos+1:]...)
+	return 0
 }
 
-func insert(a []int, e int) []int {
-
-	pos := sort.SearchInts(a, e)
-
-	if 0 == pos {
-		return append([]int{e}, a...)
-	}
-
-	if len(a) == pos {
-		return append(a, e)
-	}
-
-	return append(a[0:pos], append([]int{e}, a[pos:len(a)]...)...)
-}
+// Not used, just don't want to delete tests, so I'll leave it here
 
 func median(a []int) float32 {
 
