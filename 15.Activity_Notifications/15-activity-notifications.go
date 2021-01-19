@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"math/rand"
 	"sort"
 )
@@ -8,41 +9,65 @@ import (
 func main() {
 	//
 
+	x := []int{1, 2, 3, 3, 3, 3, 4, 5}
+	pos := sort.SearchInts(x, 3)
+
+	fmt.Println(pos)
+	fmt.Println(x[:pos])
+	fmt.Println(x[pos:len(x)])
+
 }
 
 func activityNotifications(e32 []int32, d int32) int32 {
 
 	var result int32 = 0
 	var e []int
+	// var max int32
 
-	e32 = append(quicksort(e32[0:d]), e32[d:len(e32)]...)
+	priorDays := quicksort(e32[0:d])
 
 	// sort.SearchInts takes []int    8-/
-	e = make([]int, len(e32))
-	for i := range e32 {
-		e[i] = int(e32[i])
+	e = make([]int, len(priorDays))
+	for i := range priorDays {
+		e[i] = int(priorDays[i])
 	}
 
 	// since 1 <= d <= n
-	if len(e) == int(d) {
+	if len(e32) == int(d) {
 		return result
 	}
 
-	for i := d; i < int32(len(e)); i++ {
-		if float32(e[i]) >= 2*median(e[i-d:i]) {
+	for i := d; i < int32(len(e32)); i++ {
+
+		if e32[i] >= int32(2*median(e)) {
+
+			// fmt.Println("Element e32[", i, "] = ", e32[i], " med = ", median(e), " 2*med = ", 2*median(e), " len(e) = ", len(e))
+
 			result++
 		}
 
-		if i < int32(len(e)-1) {
-			e = append(insert(e[i-d+1:i], e[i]), e[i+1:len(e)]...)
-		} else {
-			e = insert(e[i-d+1:i], e[i])
-		}
+		e = delete(e, e32[i-d])
+		e = insert(e, int(e32[i]))
+	}
+	// fmt.Println(result)
+	return result
+}
 
-		i--
+func delete(a []int, e32 int32) []int {
+
+	e := int(e32)
+
+	pos := sort.SearchInts(a, e)
+
+	if 0 == pos {
+		return a[1:len(a)]
 	}
 
-	return result
+	if len(a) == pos {
+		return a[:len(a)]
+	}
+
+	return append(a[:pos], a[pos+1:]...)
 }
 
 func insert(a []int, e int) []int {
