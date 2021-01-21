@@ -2,27 +2,21 @@ package main
 
 import (
 	"fmt"
-	s "strings"
 )
 
 func alternatingCharacters(st string) int32 {
 
-	replaced := 1
-	var replacedTotal int32
+	var replacedTotal int32 = 0
+	last := st[0]
 
-	for 1 == replaced {
+	for i := 1; i < len(st); i++ {
 
-		replaced = 0
-		if s.Contains(st, "AA") {
-			st = s.Replace(st, "AA", "A", 1)
-			replaced = 1
+		if last == st[i] {
 			replacedTotal++
+
 		}
-		if s.Contains(st, "BB") {
-			st = s.Replace(st, "BB", "B", 1)
-			replaced = 1
-			replacedTotal++
-		}
+		last = st[i]
+
 	}
 
 	return replacedTotal
