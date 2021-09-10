@@ -26,11 +26,28 @@ type cases struct {
 	expected int32
 }
 
-var testsMedian = []casesMedian{
-	{[]int{0}, float32(0)},
-	{[]int{0, 1}, float32(0.5)},
-	{[]int{1, 2, 3, 4}, float32(2.5)},
-	{[]int{1, 2, 3, 4, 5}, 3},
+func TestMedian(t *testing.T) {
+
+	testsMedian := []struct {
+		a        []int
+		expected float32
+	}{
+		{[]int{0}, float32(0)},
+		{[]int{0, 1}, float32(0.5)},
+		{[]int{1, 2, 3, 4}, float32(2.5)},
+		{[]int{1, 2, 3, 4, 5}, 3},
+	}
+
+	for _, pair := range testsMedian {
+		v := median(pair.a)
+		if v != pair.expected {
+			t.Error(
+				"For", pair.a,
+				"expected", pair.expected,
+				"got", v,
+			)
+		}
+	}
 }
 
 var testsDoubleMedian = []casesDoubleMedian{
@@ -58,19 +75,6 @@ func TestActivityNotifications(t *testing.T) {
 		{
 			t.Error(
 				"For", pair.d,
-				"expected", pair.expected,
-				"got", v,
-			)
-		}
-	}
-}
-
-func TestMedian(t *testing.T) {
-	for _, pair := range testsMedian {
-		v := median(pair.a)
-		if v != pair.expected {
-			t.Error(
-				"For", pair.a,
 				"expected", pair.expected,
 				"got", v,
 			)
