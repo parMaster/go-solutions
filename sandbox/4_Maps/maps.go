@@ -1,6 +1,9 @@
-package main
+package sandbox
 
-import "fmt"
+import (
+	"fmt"
+	"testing"
+)
 
 type Vertex struct {
 	Lat, Long float64
@@ -8,7 +11,7 @@ type Vertex struct {
 
 var m map[string]Vertex
 
-func main() {
+func TestMaps(t *testing.T) {
 	m = make(map[string]Vertex)
 	m["Bell Labs"] = Vertex{
 		40.68433, -74.39967,

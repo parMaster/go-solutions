@@ -1,6 +1,11 @@
-package main
+package sandbox
 
-import "fmt"
+import (
+	"fmt"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
 
 // fibonacci is a function that returns
 // a function that returns an int.
@@ -16,9 +21,11 @@ func fibonacci() func() int {
 	}
 }
 
-func main() {
+func TestFibExample(t *testing.T) {
 	f := fibonacci()
 	for i := 0; i < 10; i++ {
 		fmt.Println(f())
 	}
+	assert.Equal(t, f(), 55)
+
 }

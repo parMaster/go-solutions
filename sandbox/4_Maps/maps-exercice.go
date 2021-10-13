@@ -1,7 +1,8 @@
-package main
+package sandbox
 
 import (
 	"strings"
+	"testing"
 
 	"golang.org/x/tour/wc"
 )
@@ -17,6 +18,6 @@ func WordCount(s string) map[string]int {
 	return wc
 }
 
-func main() {
+func TestMapsExercice(t *testing.T) {
 	wc.Test(WordCount)
 }
