@@ -12,8 +12,6 @@ func hourglassSum(arr [][]int32) int32 {
 
 		var sum int32 = 0
 
-		// fmt.Println(arr)
-		// os.Exit(1)
 		sum =
 			(*arr)[i-1][j-1] +
 				(*arr)[i-1][j] +
