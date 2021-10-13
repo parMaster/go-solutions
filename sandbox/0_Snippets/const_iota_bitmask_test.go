@@ -1,4 +1,4 @@
-package const_iota_bitmask_test
+package snippets
 
 import (
 	"fmt"
