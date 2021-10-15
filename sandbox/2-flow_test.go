@@ -1,10 +1,14 @@
-package main
+package sandbox
 
 import (
 	"fmt"
+	"math"
 	"math/rand"
 	"runtime"
+	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // Sqrt implements iterative square root
@@ -27,7 +31,7 @@ func returnA() string {
 	return "A"
 }
 
-func main() {
+func TestFlow(t *testing.T) {
 
 	sum := 0
 	for i := 0; i < 10; i++ {
@@ -102,14 +106,57 @@ func main() {
 	defer fmt.Println("One more thing")
 
 	// Same as "switch true" - can be a clean way to write long if-then-else chains.
-	t := time.Now()
+	tm := time.Now()
 	switch {
-	case t.Hour() < 12:
+	case tm.Hour() < 12:
 		fmt.Println("Good morning!")
-	case t.Hour() < 17:
+	case tm.Hour() < 17:
 		fmt.Println("Good afternoon.")
 	default:
 		fmt.Println("Good evening.")
 	}
+}
+
+func TestInitializerSyntax(t *testing.T) {
+
+	// initializer syntax
+	menu := map[string]int{
+		"Tea":      15,
+		"Espresso": 25,
+		"Dopio":    40,
+	}
+
+	if pop, ok := menu["Dopio"]; ok {
+		fmt.Println(pop)
+		assert.Equal(t, pop, 40)
+	}
+
+}
+
+func TestInterfaceType(t *testing.T) {
+	var iInt interface{} = 1
+	var vInt int = 64
+
+	var iFloat interface{} = 0.1
+	var vFloat float64 = 420.69
+
+	var iString interface{} = "1"
+
+	assert.IsType(t, iInt, vInt)
+	assert.IsType(t, iFloat, vFloat)
+	assert.IsType(t, iString, "string")
+}
+
+func TestFloatsEquality(t *testing.T) {
+
+	num := 0.1
+	assert.Equal(t, num, math.Pow(math.Sqrt(num), 2))
+
+	num = 0.123
+	assert.NotEqual(t, num, math.Pow(math.Sqrt(num), 2))
+	fmt.Println(math.Pow(math.Sqrt(num), 2)) // 0.12299999999999998
+
+	assert.Less(t, math.Abs(num/math.Pow(math.Sqrt(num), 2)-1), 0.001)
+	assert.True(t, math.Abs(num/math.Pow(math.Sqrt(num), 2)-1) < 0.001)
 
 }
