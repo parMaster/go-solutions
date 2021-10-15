@@ -135,6 +135,7 @@ func Test_GridTraveller(t *testing.T) {
 	assert.Equal(t, 6, gridTraveller(3, 3))
 	assert.Equal(t, 70, gridTraveller(5, 5))
 	assert.Equal(t, 3432, gridTraveller(8, 8))
+	// assert.Equal(t, 3432, gridTraveller(8, 8))
 	// assert.Equal(t, 2333606220, gridTraveller(18, 18))
 	// test timed out after 30s
 }
@@ -145,12 +146,7 @@ type Grid struct {
 }
 
 func (g *Grid) gridTravellerM(i, j int) int {
-
-	elem, ok := g.solutions[i][j]
-	if ok {
-		return elem
-	}
-
+	// Check base cases first
 	if i == 1 && j == 1 {
 		return 1
 	}
@@ -159,8 +155,20 @@ func (g *Grid) gridTravellerM(i, j int) int {
 		return 0
 	}
 
-	_, oks := g.solutions[i]
-	if !oks {
+	// Check memorized solutions
+	// Those are diagonally symmetrical
+	elem, ok := g.solutions[i][j]
+	if ok {
+		return elem
+	}
+	elem, ok = g.solutions[j][i]
+	if ok {
+		return elem
+	}
+
+	// Now this seems ugly AF
+	_, ok = g.solutions[i]
+	if !ok {
 		g.solutions[i] = map[int]int{}
 	}
 
@@ -181,3 +189,15 @@ func Test_GridTravellerMemoized(t *testing.T) {
 	assert.Equal(t, 3432, g.gridTravellerM(8, 8))
 	assert.Equal(t, 2333606220, g.gridTravellerM(18, 18))
 }
+
+// MEMOIZATION RECIPE
+
+// I. Make it work
+// - visualize the problem as a tree
+// - implement the tree using recursion
+// - test it
+
+// II. Make it efficient
+// - add a memo object
+// - add a base case to return memo values
+// - store return values into the memo
