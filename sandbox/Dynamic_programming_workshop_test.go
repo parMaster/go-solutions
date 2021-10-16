@@ -218,6 +218,8 @@ func Test_GridTravellerMemoized(t *testing.T) {
 // using numbers from the array
 // We can use an element of the array as many times as needed
 // all input numbers >=0
+
+// Brute force solution
 func canSum(t int, e []int) bool {
 
 	var res bool = false
@@ -238,7 +240,32 @@ func canSum(t int, e []int) bool {
 	return res
 }
 
-// var solutions map[int]map[int]int
+//Memoized brute force solution
+func canSumM(target int, e []int, memo map[int]bool) bool {
+
+	elem, ok := memo[target]
+	if ok {
+		return elem
+	}
+
+	if target == 0 {
+		return true
+	}
+
+	if target < 0 {
+		return false
+	}
+
+	for _, v := range e {
+		memo[target-v] = canSumM(target-v, e, memo)
+		if memo[target-v] {
+			return true
+		}
+	}
+
+	memo[target] = false
+	return false
+}
 func Test_canSum(t *testing.T) {
 
 	testPairs := []struct {
@@ -246,11 +273,20 @@ func Test_canSum(t *testing.T) {
 		targetSum int
 		numbers   []int
 	}{
+		{true, 7, []int{2, 3}},
 		{true, 7, []int{5, 3, 4, 7}},
+		{false, 7, []int{2, 4}},
+		{true, 8, []int{2, 3, 5}},
+		{false, 300, []int{7, 14}},
 	}
 
 	for _, p := range testPairs {
 		assert.Equal(t, p.expected, canSum(p.targetSum, p.numbers))
+	}
+
+	for _, p := range testPairs {
+		solutions := make(map[int]bool)
+		assert.Equal(t, p.expected, canSumM(p.targetSum, p.numbers, solutions))
 	}
 
 }
