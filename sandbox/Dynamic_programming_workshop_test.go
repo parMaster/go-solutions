@@ -366,3 +366,87 @@ func Test_howSum(t *testing.T) {
 		assert.Equal(t, p.expected, howSumM(p.targetSum, p.numbers, memo))
 	}
 }
+
+// Problem V bestSum
+// Find a shortest way to get sum of elements equal Target
+
+func bestSum(target int, numbers []int) []int {
+	if target == 0 {
+		return []int{}
+	}
+	if target < 0 {
+		return nil
+	}
+
+	var shortest []int
+
+	for _, n := range numbers {
+		remainder := target - n
+		remainderCombination := bestSum(remainder, numbers)
+		if remainderCombination != nil {
+			combination := append(remainderCombination, n)
+			if shortest == nil || len(combination) < len(shortest) {
+				shortest = combination
+			}
+		}
+	}
+
+	return shortest
+}
+
+func bestSumM(target int, numbers []int, memo map[int][]int) []int {
+
+	elem, ok := memo[target]
+	if ok {
+		return elem
+	}
+
+	if target == 0 {
+		return []int{}
+	}
+
+	if target < 0 {
+		return nil
+	}
+
+	var shortest []int
+
+	for _, n := range numbers {
+		remainder := target - n
+		remainderCombination := bestSumM(remainder, numbers, memo)
+		if remainderCombination != nil {
+			combination := append(remainderCombination, n)
+			if shortest == nil || len(combination) < len(shortest) {
+				shortest = combination
+			}
+		}
+	}
+
+	memo[target] = shortest
+	return shortest
+}
+
+func Test_bestSum(t *testing.T) {
+
+	testPairs := []struct {
+		expected  []int
+		targetSum int
+		numbers   []int
+	}{
+		{[]int{7}, 7, []int{5, 3, 4, 7}},
+		{[]int{5, 3}, 8, []int{2, 3, 5}},
+		{[]int{4, 4}, 8, []int{1, 4, 5}},
+		{[]int{25, 25, 25, 25}, 100, []int{1, 2, 5, 25}}, //timeout
+	}
+
+	for _, p := range testPairs {
+		if p.targetSum < 50 { // to avoid timeouts
+			assert.Equal(t, p.expected, bestSum(p.targetSum, p.numbers))
+		}
+	}
+
+	for _, p := range testPairs {
+		memo := make(map[int][]int)
+		assert.Equal(t, p.expected, bestSumM(p.targetSum, p.numbers, memo))
+	}
+}
