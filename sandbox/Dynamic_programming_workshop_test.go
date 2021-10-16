@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// PROBLEM I
 // Fibonacci recursion
 // Intuitive method, written "from memory" actually
 func FibR(n1, n2, i, n int) int {
@@ -113,7 +114,7 @@ func Test_FibC_Example(t *testing.T) {
 	assert.Equal(t, f(), 55)
 }
 
-//
+// PROBLEM II
 // Grid Traveller Problem
 func gridTraveller(i, j int) int {
 
@@ -201,3 +202,55 @@ func Test_GridTravellerMemoized(t *testing.T) {
 // - add a memo object
 // - add a base case to return memo values
 // - store return values into the memo
+
+// PROBLEM III
+// canSum(targetSum, numbers) that takes in a
+// targetSum and an array of numbers as arguments
+// returns true if it's possiible to generate targetSum
+// using numbers from the array
+// We can use an element of the array as many times as needed
+// all input numbers >=0
+
+// PROBLEM III
+// canSum(targetSum, numbers) that takes in a
+// targetSum and an array of numbers as arguments
+// returns true if it's possiible to generate targetSum
+// using numbers from the array
+// We can use an element of the array as many times as needed
+// all input numbers >=0
+func canSum(t int, e []int) bool {
+
+	var res bool = false
+
+	if t == 0 {
+		res = true
+		return true
+	}
+
+	if t < 0 {
+		return false
+	}
+
+	for _, v := range e {
+		res = res || canSum(t-v, e)
+	}
+
+	return res
+}
+
+// var solutions map[int]map[int]int
+func Test_canSum(t *testing.T) {
+
+	testPairs := []struct {
+		expected  bool
+		targetSum int
+		numbers   []int
+	}{
+		{true, 7, []int{5, 3, 4, 7}},
+	}
+
+	for _, p := range testPairs {
+		assert.Equal(t, p.expected, canSum(p.targetSum, p.numbers))
+	}
+
+}
