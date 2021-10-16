@@ -240,7 +240,9 @@ func canSum(t int, e []int) bool {
 	return res
 }
 
-//Memoized brute force solution
+// Memoized brute force solution
+// No receiver, just a memo map
+// since map is a reference type, no * or & needed
 func canSumM(target int, e []int, memo map[int]bool) bool {
 
 	elem, ok := memo[target]
@@ -285,8 +287,82 @@ func Test_canSum(t *testing.T) {
 	}
 
 	for _, p := range testPairs {
+		// clear the memory map every time
 		solutions := make(map[int]bool)
 		assert.Equal(t, p.expected, canSumM(p.targetSum, p.numbers, solutions))
 	}
+}
 
+// Problem IV - howSum
+// return any combination of Numbers sum of which is Target
+
+// Brute force implementation
+func howSum(target int, numbers []int) []int {
+	if target == 0 {
+		return []int{}
+	}
+
+	if target < 0 {
+		return nil
+	}
+
+	for _, v := range numbers {
+		result := howSum(target-v, numbers)
+		if result != nil {
+			return append(result, v)
+		}
+	}
+
+	return nil
+}
+
+// Memoized brute force
+func howSumM(target int, numbers []int, memo map[int][]int) []int {
+
+	elem, ok := memo[target]
+	if ok {
+		return elem
+	}
+
+	if target == 0 {
+		return []int{}
+	}
+
+	if target < 0 {
+		return nil
+	}
+
+	for _, v := range numbers {
+		result := howSumM(target-v, numbers, memo)
+		memo[target-v] = result
+		if result != nil {
+			return append(result, v)
+		}
+	}
+
+	return nil
+}
+
+func Test_howSum(t *testing.T) {
+
+	testPairs := []struct {
+		expected  []int
+		targetSum int
+		numbers   []int
+	}{
+		{[]int{3, 2, 2}, 7, []int{2, 3}},
+		{[]int{4, 3}, 7, []int{5, 3, 4, 7}},
+		{nil, 7, []int{2, 4}},
+		{[]int{2, 2, 2, 2}, 8, []int{2, 3, 5}},
+		{nil, 300, []int{7, 14}},
+	}
+
+	for _, p := range testPairs {
+		assert.Equal(t, p.expected, howSum(p.targetSum, p.numbers))
+	}
+
+	for _, p := range testPairs {
+		memo := make(map[int][]int)
+		assert.Equal(t, p.expected, howSumM(p.targetSum, p.numbers, memo))
+	}
 }
