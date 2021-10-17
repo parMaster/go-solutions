@@ -2,6 +2,7 @@ package sandbox
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -449,4 +450,47 @@ func Test_bestSum(t *testing.T) {
 		memo := make(map[int][]int)
 		assert.Equal(t, p.expected, bestSumM(p.targetSum, p.numbers, memo))
 	}
+}
+
+// Problem VI
+// canConstruct(abcdef, [ab, abc, cd, def, abcd]) == true
+// Can abcdef be constructed from the elements
+// canConstruct(skateboard, [bo, rd, ate, t, ska, sk, boar]) == false
+func canConstruct(s string, elements []string) bool {
+	if len(s) == 0 {
+		return true
+	}
+
+	for _, v := range elements {
+		if strings.HasPrefix(s, v) {
+			if canConstruct(strings.Replace(s, v, "", 1), elements) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+func Test_canConstruct(t *testing.T) {
+
+	testPairs := []struct {
+		expected bool
+		s        string
+		elements []string
+	}{
+		{true, "abcdef", []string{"ab", "abc", "cd", "def", "abcd"}},
+		{false, "skateboard", []string{"bo", "rd", "ate", "t", "ska", "sk", "boar"}},
+		{true, "enterapotentpot", []string{"a", "p", "ent", "enter", "ot", "o", "t"}},
+		// {false, "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeet", []string{"e", "ee", "eee", "eeee"}},
+	}
+
+	for _, p := range testPairs {
+		assert.Equal(t, p.expected, canConstruct(p.s, p.elements))
+	}
+
+	// for _, p := range testPairs {
+	// 	memo := make(map[int][]int)
+	// 	assert.Equal(t, p.expected, bestSumM(p.targetSum, p.numbers, memo))
+	// }
 }
