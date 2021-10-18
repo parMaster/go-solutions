@@ -469,3 +469,20 @@ func Test_bestSum(t *testing.T) {
 // m - operations to iteratively create a subslice, every time, so n^m times
 //
 // SPACE COMPLEXITY is O(m*m) ??
+//
+// Memoized time complexity
+// O(n*m * m)
+// O(m^2) space complexity
+
+// Problem VII
+// countConstruct (target, wordBank)
+// how many ways to construct a target string with wordBank?
+// words can be used as many times as needed
+// Example :
+// target = "purple" , wordBank = {purp, p, ur, le, purpl}
+// purp -> le -> "" 1
+// p -> urple -> ur -> ple -> le -> "" 1
+// ur -> nil
+// le - nil
+// purpl -> e -> nil
+// Answer = 2
