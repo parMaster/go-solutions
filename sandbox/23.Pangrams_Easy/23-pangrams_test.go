@@ -13,7 +13,7 @@ func pangrams(s string) string {
 	m := make(map[byte]int)
 	for i := 0; i <= len(s)-1; i++ {
 
-		if s[i] == 32 {
+		if s[i] == 32 { // filtering out spaces
 			continue
 		}
 		_, ok := m[s[i]]
@@ -29,7 +29,6 @@ func pangrams(s string) string {
 	} else {
 		return "not pangram"
 	}
-
 }
 
 func Test_pangrams(t *testing.T) {
