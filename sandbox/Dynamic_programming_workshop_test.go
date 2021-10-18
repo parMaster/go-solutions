@@ -472,25 +472,95 @@ func canConstruct(s string, elements []string) bool {
 	return false
 }
 
+func canConstructM(s string, elements []string, memo map[string]bool) bool {
+	elem, ok := memo[s]
+	if ok {
+		return elem
+	}
+
+	if len(s) == 0 {
+		return true
+	}
+
+	for _, v := range elements {
+		if strings.HasPrefix(s, v) {
+			res := canConstructM(strings.Replace(s, v, "", 1), elements, memo)
+			memo[s] = res
+			if res {
+				return true
+			}
+		}
+	}
+
+	memo[s] = false
+	return false
+}
+
 func Test_canConstruct(t *testing.T) {
 
-	testPairs := []struct {
+	type Tests struct {
 		expected bool
 		s        string
 		elements []string
-	}{
+	}
+
+	testPairs := []Tests{
 		{true, "abcdef", []string{"ab", "abc", "cd", "def", "abcd"}},
 		{false, "skateboard", []string{"bo", "rd", "ate", "t", "ska", "sk", "boar"}},
 		{true, "enterapotentpot", []string{"a", "p", "ent", "enter", "ot", "o", "t"}},
-		// {false, "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeet", []string{"e", "ee", "eee", "eeee"}},
 	}
 
 	for _, p := range testPairs {
 		assert.Equal(t, p.expected, canConstruct(p.s, p.elements))
 	}
 
-	// for _, p := range testPairs {
-	// 	memo := make(map[int][]int)
-	// 	assert.Equal(t, p.expected, bestSumM(p.targetSum, p.numbers, memo))
-	// }
+	hardCase := Tests{
+		false, "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeet", []string{"e", "ee", "eee", "eeee"},
+	}
+	testPairs = append(testPairs, hardCase)
+
+	for _, p := range testPairs {
+		memo := make(map[string]bool)
+		assert.Equal(t, p.expected, canConstructM(p.s, p.elements, memo))
+	}
+}
+
+// canConstruct notes
+// TIME COMPLEXITY is O(n^m):
+// n - wordBank.lenght and branching factor, because every word is checked on each level
+// n*n*n*n... every time
+// m - target length - tree height
+// canConstruct will be called n^m times, thus the time complexity is O(n^m)
+//
+// Complexity contributers:
+// Branching factor (N) - how FAST is it growing
+// Tree height 		(M) - how TALL it is
+// Total_number_of_Iterations = (Branching_factor ^ Tree_height)
+//
+// Other costly operations:
+// Iteratively creating a subslice every call - will make it more expensive, like:
+// O(n^m * m)
+// m - operations to iteratively create a subslice, every time, so n^m times
+//
+// SPACE COMPLEXITY is O(m*m) ??
+//
+// Memoized time complexity
+// O(n*m * m)
+// O(m^2) space complexity
+
+// Problem VII
+// countConstruct (target, wordBank)
+// how many ways to construct a target string with wordBank?
+// words can be used as many times as needed
+// Example :
+// target = "purple" , wordBank = {purp, p, ur, le, purpl}
+// purp -> le -> "" 1
+// p -> urple -> ur -> ple -> le -> "" 1
+// ur -> nil
+// le - nil
+// purpl -> e -> nil
+// Answer = 2
+
+func countConstruct(target string, wordBank []string) int {
+	return 0
 }
