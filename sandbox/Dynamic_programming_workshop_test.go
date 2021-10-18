@@ -450,3 +450,22 @@ func Test_bestSum(t *testing.T) {
 		assert.Equal(t, p.expected, bestSumM(p.targetSum, p.numbers, memo))
 	}
 }
+
+// canConstruct notes
+// TIME COMPLEXITY is O(n^m):
+// n - wordBank.lenght and branching factor, because every word is checked on each level
+// n*n*n*n... every time
+// m - target length - tree height
+// canConstruct will be called n^m times, thus the time complexity is O(n^m)
+//
+// Complexity contributers:
+// Branching factor (N) - how FAST is it growing
+// Tree height 		(M) - how TALL it is
+// Total_number_of_Iterations = (Branching_factor ^ Tree_height)
+//
+// Other costly operations:
+// Iteratively creating a subslice every call - will make it more expensive, like:
+// O(n^m * m)
+// m - operations to iteratively create a subslice, every time, so n^m times
+//
+// SPACE COMPLEXITY is O(m*m) ??
