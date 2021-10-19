@@ -610,3 +610,62 @@ func Test_countConstruct(t *testing.T) {
 		assert.Equal(t, p.expected, countConstructM(p.s, p.elements, memo))
 	}
 }
+
+// Problem VIII
+// allConstruct (target, wordBank)
+// same, but returns 2D array with all answers
+// i.e. 	allConstruct("abcdef", []string{"ab", "abc", "cd", "def", "abcd")
+// Should return:
+// ab, cd, ef
+// ab, c, def
+// abc, def
+// abcd, ef
+// 4 in total, as countConstruct counted before
+func allConstruct(target string, wordBank []string, memo map[string][][]string) [][]string {
+	res := [][]string{}
+	return res
+
+	elem, ok := memo[target]
+	if ok {
+		return elem
+	}
+
+	if len(target) == 0 {
+		return [][]string{}
+	}
+
+	allConstruct := [][]string{}
+	for _, v := range wordBank {
+		if strings.HasPrefix(target, v) {
+			memo[target] = allConstruct(strings.Replace(target, v, "", 1), wordBank, memo)
+			countConstruct += memo[target]
+		}
+	}
+
+	memo[target] = countConstruct
+	return countConstruct
+
+}
+
+func Test_allConstruct(t *testing.T) {
+
+	type Tests struct {
+		expected [][]string
+		s        string
+		elements []string
+	}
+
+	testPairs := []Tests{
+		{[][]string{{"ab", "cd", "ef"}, {"ab", "c", "def"}, {"abc", "def"}, {"abcd", "ef"}}, "abcdef", []string{"ab", "abc", "cd", "def", "abcd"}},
+	}
+
+	hardCase := Tests{
+		[][]string{}, "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeet", []string{"e", "ee", "eee", "eeee"},
+	}
+	testPairs = append(testPairs, hardCase)
+
+	for _, p := range testPairs {
+		memo := make(map[string][][]string)
+		assert.Equal(t, p.expected, allConstruct(p.s, p.elements, memo))
+	}
+}
