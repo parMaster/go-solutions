@@ -560,7 +560,49 @@ func Test_canConstruct(t *testing.T) {
 // le - nil
 // purpl -> e -> nil
 // Answer = 2
+func countConstructM(target string, wordBank []string, memo map[string]int) int {
+	elem, ok := memo[target]
+	if ok {
+		return elem
+	}
 
-func countConstruct(target string, wordBank []string) int {
-	return 0
+	if len(target) == 0 {
+		return 1
+	}
+
+	var countConstruct int = 0
+	for _, v := range wordBank {
+		if strings.HasPrefix(target, v) {
+			memo[target] = countConstructM(strings.Replace(target, v, "", 1), wordBank, memo)
+			countConstruct += memo[target]
+		}
+	}
+
+	memo[target] = countConstruct
+	return countConstruct
+}
+
+func Test_countConstruct(t *testing.T) {
+
+	type Tests struct {
+		expected int
+		s        string
+		elements []string
+	}
+
+	testPairs := []Tests{
+		{1, "abcdef", []string{"ab", "abc", "cd", "def", "abcd"}},
+		{0, "skateboard", []string{"bo", "rd", "ate", "t", "ska", "sk", "boar"}},
+		{4, "enterapotentpot", []string{"a", "p", "ent", "enter", "ot", "o", "t"}},
+	}
+
+	hardCase := Tests{
+		0, "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeet", []string{"e", "ee", "eee", "eeee"},
+	}
+	testPairs = append(testPairs, hardCase)
+
+	for _, p := range testPairs {
+		memo := make(map[string]int)
+		assert.Equal(t, p.expected, countConstructM(p.s, p.elements, memo))
+	}
 }
