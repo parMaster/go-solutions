@@ -599,7 +599,11 @@ func Test_countConstruct(t *testing.T) {
 	hardCase := Tests{
 		0, "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeet", []string{"e", "ee", "eee", "eeee"},
 	}
+	hardCaseSolvable := Tests{
+		73859288608, "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeet", []string{"e", "ee", "eee", "eeee", "t"},
+	}
 	testPairs = append(testPairs, hardCase)
+	testPairs = append(testPairs, hardCaseSolvable)
 
 	for _, p := range testPairs {
 		memo := make(map[string]int)
