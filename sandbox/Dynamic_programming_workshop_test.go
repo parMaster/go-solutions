@@ -622,28 +622,26 @@ func Test_countConstruct(t *testing.T) {
 // abcd, ef
 // 4 in total, as countConstruct counted before
 func allConstruct(target string, wordBank []string, memo map[string][][]string) [][]string {
-	res := [][]string{}
-	return res
-
 	elem, ok := memo[target]
 	if ok {
 		return elem
 	}
 
 	if len(target) == 0 {
-		return [][]string{}
+		return [][]string{{}}
 	}
 
-	allConstruct := [][]string{}
+	currentAllConstruct := [][]string{}
 	for _, v := range wordBank {
 		if strings.HasPrefix(target, v) {
-			memo[target] = allConstruct(strings.Replace(target, v, "", 1), wordBank, memo)
-			countConstruct += memo[target]
+			newTarget := strings.Replace(target, v, "", 1)
+			//			memo[newTarget] = allConstruct(newTarget, wordBank, memo)
+			//			currentAllConstruct = append(currentAllConstruct, memo[newTarget])
 		}
 	}
 
-	memo[target] = countConstruct
-	return countConstruct
+	memo[target] = currentAllConstruct
+	return currentAllConstruct
 
 }
 
