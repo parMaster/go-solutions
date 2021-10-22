@@ -621,6 +621,8 @@ func Test_countConstruct(t *testing.T) {
 // abc, def
 // abcd, ef
 // 4 in total, as countConstruct counted before
+
+// Can't crack this one yet ((
 func allConstruct(target string, wordBank []string, memo map[string][][]string) [][]string {
 	elem, ok := memo[target]
 	if ok {
@@ -634,7 +636,7 @@ func allConstruct(target string, wordBank []string, memo map[string][][]string) 
 	currentAllConstruct := [][]string{}
 	for _, v := range wordBank {
 		if strings.HasPrefix(target, v) {
-			newTarget := strings.Replace(target, v, "", 1)
+			// newTarget := strings.Replace(target, v, "", 1)
 			//			memo[newTarget] = allConstruct(newTarget, wordBank, memo)
 			//			currentAllConstruct = append(currentAllConstruct, memo[newTarget])
 		}
@@ -666,4 +668,64 @@ func Test_allConstruct(t *testing.T) {
 		memo := make(map[string][][]string)
 		assert.Equal(t, p.expected, allConstruct(p.s, p.elements, memo))
 	}
+}
+
+// Problem IX
+// Fib Tabulation
+// Building a table iteratively
+// fib(6) -> 8
+// 0	1	2	3	4	5	6
+// take add add
+// 0	1	1	2	3	5	8
+func fibT(n int) int {
+	t := make([]int, n+2)
+
+	t[0] = 0
+	t[1] = 1
+
+	for i := 0; i < n; i++ {
+		t[i+1] += t[i]
+		t[i+2] += t[i]
+	}
+
+	return t[n]
+}
+
+func Test_FibT(t *testing.T) {
+	assert.Equal(t, 8, fibT(6))
+	assert.Equal(t, 13, fibT(7))
+	assert.Equal(t, 21, fibT(8))
+	assert.Equal(t, 12586269025, fibT(50))
+}
+
+// Problem X
+// Tabulated gridTraveller
+type TabGrid struct {
+	solutions [][]int
+}
+
+func (g *TabGrid) gridTraveller(n, m int) int {
+	g.solutions = make([][]int, n+2)
+	for i := 0; i <= n+1; i++ {
+		g.solutions[i] = make([]int, m+2)
+	}
+	g.solutions[1][1] = 1
+
+	for i := 0; i <= n; i++ {
+		for j := 0; j <= m; j++ {
+			g.solutions[i+1][j] += g.solutions[i][j]
+			g.solutions[i][j+1] += g.solutions[i][j]
+		}
+	}
+
+	return g.solutions[n][m]
+}
+
+func Test_GridTravellerTabulized(t *testing.T) {
+
+	var g TabGrid
+	assert.Equal(t, 1, g.gridTraveller(1, 1))
+	assert.Equal(t, 3, g.gridTraveller(2, 3))
+	assert.Equal(t, 3, g.gridTraveller(3, 2))
+	assert.Equal(t, 6, g.gridTraveller(3, 3))
 }
