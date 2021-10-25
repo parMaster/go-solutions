@@ -43,6 +43,9 @@ Runs cat /etc/hosts on container <container_name> and returns result
 Latest by default
     docker run redis:4.0 --- will run redis version 4.0  
 
+    docker run --name <name> <image>
+Runs image in container **named \<name\>**
+
 ## Attached vs Detached modes
 
     docker run kodekloud/simple-webapp
@@ -92,8 +95,9 @@ Provides info about container: state, mounts, config
 
 # Docker Build
     docker build -t <tag> <path>
-Build a container from <path> and name it <tag>
+Build a container from \<path\> and name it \<tag\>
 
+\<tag\> can be tag:version 
 
 # Dockerfile
 
@@ -153,6 +157,7 @@ Three networks:
 - Bridge (default network). Internal IPs. Mapping internal ports to extrnal required to acces container apps
 - none - not attached, no network access, isolated network
 - host - container uses host network. No network isolation, no port mapping required.
+
 
 Can be specified at launch:
 
@@ -244,7 +249,7 @@ Adding **DEPRECATED** link option to voting app:
 
 Finally, **DEPRECATED** links for every service in this example:
 
-    docker run -d --name=redis redis
+    docker run -d --name=redis rediskk
     docker run -d --name=db postgres:9.4 --link db:db result-app
     docker run -d --name=vote -p 5000:80 --link redis:redis voting-app
     docker run -d --name=result -p 5001:80
@@ -319,14 +324,14 @@ version 1 is on the default Bridged network
 ## Docker-compose versions
 
 ### V2
-    - links automatically created
-    - images run on Bridged network and can talk to each other
+links automatically created
+
+images run on **Bridged** network and can talk to each other
 
     version: 2
     services:
         redis:
             image: redis
-
             networks:
                 - back-end
         db:
@@ -377,7 +382,7 @@ obviously login and run a container form a prvate registry image
 
     docker image tag   my-image localhost:5000/my-image
 
-    docker push localhost:5000?my-image
+    docker push localhost:5000/my-image
 
 Then the image is accessible if host is accessible:
 
