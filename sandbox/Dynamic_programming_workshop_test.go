@@ -809,3 +809,64 @@ func Test_canSumTab(t *testing.T) {
 	}
 
 }
+
+/** Problem XII - howSum tabulation
+
+howSum(7, [5,3,4]) -> [4,3]
+
+so, return an array
+seed value: howSum(0, [...]) is always an empty array
+
+*/
+
+func howSumTabulized(target int, elements []int) []int {
+
+	m := make([][]int, target+1)
+
+	for i := 0; i <= target; i++ {
+		m[i] = nil
+	}
+	m[0] = []int{}
+
+	for i := 0; i <= target; i++ {
+
+		if m[i] == nil {
+			continue
+		}
+
+		for _, elem := range elements {
+
+			if i+elem <= target {
+
+				// if i+elements[j] <= target {
+				// 	m[int(i+elements[j])] = true
+				// }
+
+				m[i+elem] = append(m[i], elem)
+			}
+		}
+	}
+
+	return m[target]
+}
+
+func Test_howSumTabulized(t *testing.T) {
+
+	assert.Equal(t, []int{}, howSumTabulized(0, []int{5, 3, 4}))
+
+	testPairs := []struct {
+		expected  []int
+		targetSum int
+		numbers   []int
+	}{
+		{[]int{3, 2, 2}, 7, []int{2, 3}},
+		{[]int{4, 3}, 7, []int{5, 3, 4, 7}},
+		{nil, 7, []int{2, 4}},
+		{[]int{2, 2, 2, 2}, 8, []int{2, 3, 5}},
+		{nil, 300, []int{7, 14}},
+	}
+
+	for _, p := range testPairs {
+		assert.Equal(t, p.expected, howSumTabulized(p.targetSum, p.numbers))
+	}
+}
