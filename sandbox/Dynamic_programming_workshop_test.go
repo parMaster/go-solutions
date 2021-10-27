@@ -729,3 +729,83 @@ func Test_GridTravellerTabulized(t *testing.T) {
 	assert.Equal(t, 3, g.gridTraveller(3, 2))
 	assert.Equal(t, 6, g.gridTraveller(3, 3))
 }
+
+/**
+*	Tabulation Recipe
+	- No "brute force first" like with memoization.
+
+	- Visualize the problem as a table.
+	- Size the table based On the inputs. Watch out for "off by one" errors
+	- initialize the table with default values
+	- seed the trivial answer into the table (0,1 for Fib)
+	- iterate through the table
+	- fill further positions based on the current position
+*/
+
+/** Problem Xi - canSum tabulation
+ canSum(7, [5,3,4]) -> true
+
+	initializing table of size 7+1
+	[F, F, F, F, F, F, F, F]
+
+	seed a basic solution canSub(0) always == true
+	[T, F, F, F, F, F, F, F]
+
+	iteration from 0 to target, look ahead at every Element array index and mark it True
+	 0  1  2  3  4  5  6  7
+	[T, F, F, T, T, T, F, F]
+
+	Then we'll skip 1 and 2 because it's already false branches, and finally:
+	after we chacked the bounds
+	[T, F, F, T, T, T, T, T]
+
+	m[7] is the result
+
+
+
+	Tabulized solution
+ O(M*N) time complexity
+ O(M) space somplexity
+*/
+func canSumTabulized(target int, elements []int) bool {
+
+	m := make([]bool, target+1)
+
+	for i := 0; i <= target; i++ {
+		m[i] = false
+	}
+	m[0] = true
+
+	for i := 0; i <= target; i++ {
+		if m[i] == false {
+			continue
+		}
+
+		for j := 0; j < len(elements); j++ {
+			if i+elements[j] <= target {
+				m[int(i+elements[j])] = true
+			}
+		}
+	}
+
+	return m[target]
+}
+
+func Test_canSumTab(t *testing.T) {
+	testPairs := []struct {
+		expected  bool
+		targetSum int
+		numbers   []int
+	}{
+		{true, 7, []int{2, 3}},
+		{true, 7, []int{5, 3, 4}},
+		{false, 7, []int{2, 4}},
+		{true, 8, []int{2, 3, 5}},
+		{false, 300, []int{7, 14}},
+	}
+
+	for _, p := range testPairs {
+		assert.Equal(t, p.expected, canSumTabulized(p.targetSum, p.numbers))
+	}
+
+}
