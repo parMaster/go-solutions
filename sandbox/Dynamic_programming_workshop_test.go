@@ -979,3 +979,70 @@ func Test_canConstructTabulized(t *testing.T) {
 		assert.Equal(t, p.expected, canConstructTabulized(p.s, p.elements))
 	}
 }
+
+/*
+	Problem X - countConstruct Tabulation
+	countConstruct( purple , { purp, p, ur, le, purpl }) -> 2
+*/
+func countConstructTab(target string, elements []string) int {
+
+	m := make([]int, len(target)+1)
+	for i := 0; i <= len(target); i++ {
+		m[i] = 0
+	}
+
+	// m[i] == 2 - means that there are 2 ways to construct a string target[0:i-1], so
+	// number at m[len(target)] is a solution for _target_ string
+
+	// seed value - empty string can always be constructed whatewer the elements array
+	m[0] = 1
+	subTarget := target
+
+	for i := 0; i <= len(target); i++ {
+
+		if m[i] == 0 {
+			continue
+		}
+
+		subTarget = target[i:]
+
+		for _, elem := range elements {
+
+			if strings.HasPrefix(subTarget, elem) {
+				m[i+len(elem)] += m[i]
+			}
+
+		}
+
+	}
+
+	return m[len(target)]
+}
+
+func Test_countConstructTab(t *testing.T) {
+
+	type Tests struct {
+		expected int
+		s        string
+		elements []string
+	}
+
+	testPairs := []Tests{
+		{1, "abcdef", []string{"ab", "abc", "cd", "def", "abcd"}},
+		{0, "skateboard", []string{"bo", "rd", "ate", "t", "ska", "sk", "boar"}},
+		{4, "enterapotentpot", []string{"a", "p", "ent", "enter", "ot", "o", "t"}},
+	}
+
+	hardCase := Tests{
+		0, "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeet", []string{"e", "ee", "eee", "eeee"},
+	}
+	hardCaseSolvable := Tests{
+		73859288608, "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeet", []string{"e", "ee", "eee", "eeee", "t"},
+	}
+	testPairs = append(testPairs, hardCase)
+	testPairs = append(testPairs, hardCaseSolvable)
+
+	for _, p := range testPairs {
+		assert.Equal(t, p.expected, countConstructTab(p.s, p.elements))
+	}
+}
