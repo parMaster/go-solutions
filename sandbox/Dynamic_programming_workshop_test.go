@@ -1046,3 +1046,76 @@ func Test_countConstructTab(t *testing.T) {
 		assert.Equal(t, p.expected, countConstructTab(p.s, p.elements))
 	}
 }
+
+/*
+	Problem XII - allConstruct Tabulation
+
+	allConstruct("abcdef", []string{"ab", "abc", "cd", "def", "abcd")
+	Should return:
+	[
+		[ab, cd, ef]
+		[ab, c, def]
+		[abc, def]
+		[abcd, ef]
+	]
+*/
+func allConstructTab(target string, elements []string) [][]string {
+
+	m := make([][][]string, len(target)+1)
+
+	for i := 0; i <= len(target); i++ {
+		m[i] = [][]string{}
+	}
+	m[0] = [][]string{{}}
+
+	for i := 0; i <= len(target); i++ {
+
+		if len(m[i]) == 0 {
+			continue
+		}
+
+		subTarget := target[i:]
+
+		for _, elem := range elements {
+
+			if strings.HasPrefix(subTarget, elem) {
+
+				futurePos := i + len(elem)
+				for _, v := range m[i] {
+					m[futurePos] = append(m[futurePos], append(v, elem))
+				}
+
+			}
+
+		}
+
+	}
+
+	return m[len(target)]
+}
+
+func Test_allConstructTab(t *testing.T) {
+
+	type Tests struct {
+		expected [][]string
+		s        string
+		elements []string
+	}
+
+	testPairs := []Tests{
+		{[][]string{{"abc", "def"}, {"ab", "c", "def"}, {"abcd", "ef"}, {"ab", "cd", "ef"}}, "abcdef", []string{"ab", "abc", "cd", "def", "abcd", "ef", "c"}},
+		{[][]string{{}}, "", []string{"cat", "dog"}},
+	}
+
+	// Timeout
+	// Tabulazed solution is EXPONENTIAL actually
+
+	// hardCase := Tests{
+	// 	[][]string{{}}, "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeet", []string{"e", "ee", "eee", "eeee"},
+	// }
+	// testPairs = append(testPairs, hardCase)
+
+	for _, p := range testPairs {
+		assert.Equal(t, p.expected, allConstructTab(p.s, p.elements))
+	}
+}
