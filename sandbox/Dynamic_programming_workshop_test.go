@@ -818,7 +818,6 @@ so, return an array
 seed value: howSum(0, [...]) is always an empty array
 
 */
-
 func howSumTabulized(target int, elements []int) []int {
 
 	m := make([][]int, target+1)
@@ -837,10 +836,6 @@ func howSumTabulized(target int, elements []int) []int {
 		for _, elem := range elements {
 
 			if i+elem <= target {
-
-				// if i+elements[j] <= target {
-				// 	m[int(i+elements[j])] = true
-				// }
 
 				m[i+elem] = append(m[i], elem)
 			}
@@ -868,5 +863,119 @@ func Test_howSumTabulized(t *testing.T) {
 
 	for _, p := range testPairs {
 		assert.Equal(t, p.expected, howSumTabulized(p.targetSum, p.numbers))
+	}
+}
+
+/*
+	Problem XIII - bestSum(target, elements{}) tabulation
+
+*/
+func bestSumTabulized(target int, elements []int) []int {
+
+	// initialize
+	m := make([][]int, target+1)
+	for i := 0; i <= target; i++ {
+		m[i] = nil
+	}
+
+	// seed
+	m[0] = []int{}
+
+	for i := 0; i <= target; i++ {
+		if m[i] == nil {
+			continue
+		}
+
+		for _, elem := range elements {
+
+			// bounds check
+			if i+elem <= target {
+
+				// Cgecking target function - minimize the route (result length)
+				if m[i+elem] == nil || len(append(m[i], elem)) < len(m[i+elem]) {
+					m[i+elem] = append(m[i], elem)
+				}
+			}
+		}
+	}
+
+	return m[target]
+}
+
+func Test_bestSumTabulized(t *testing.T) {
+
+	testPairs := []struct {
+		expected  []int
+		targetSum int
+		numbers   []int
+	}{
+		{[]int{7}, 7, []int{5, 3, 4, 7}},
+		{[]int{3, 5}, 8, []int{2, 3, 5}},
+		{[]int{4, 4}, 8, []int{1, 4, 5}},
+		{[]int{25, 25, 25, 25}, 100, []int{1, 2, 5, 25}}, //timeout
+	}
+
+	for _, p := range testPairs {
+		assert.Equal(t, p.expected, bestSumTabulized(p.targetSum, p.numbers))
+	}
+}
+
+/*
+	Problem IX - tabulating canConstruct
+	canConstruct(abcdef, {ab, abc, cd, def, abcd}) -> true
+*/
+func canConstructTabulized(target string, elements []string) bool {
+
+	m := make([]bool, len(target)+1)
+	for i := 0; i <= len(target); i++ {
+		m[i] = false
+	}
+
+	// m[i] == true - means that it is possible to construct a string target[0:i-1], so
+	// true at m[len(target)] means target can be constructed
+
+	// seed value - empty string can always be constructed whatewer the elements array
+	m[0] = true
+	subTarget := target
+
+	for i := 0; i <= len(target); i++ {
+
+		if !m[i] {
+			continue
+		}
+
+		subTarget = target[i:]
+
+		for _, elem := range elements {
+			if strings.HasPrefix(subTarget, elem) {
+				m[i+len(elem)] = true
+			}
+		}
+	}
+
+	return m[len(target)]
+}
+
+func Test_canConstructTabulized(t *testing.T) {
+
+	type Tests struct {
+		expected bool
+		s        string
+		elements []string
+	}
+
+	testPairs := []Tests{
+		{true, "abcdef", []string{"ab", "abc", "cd", "def", "abcd"}},
+		{false, "skateboard", []string{"bo", "rd", "ate", "t", "ska", "sk", "boar"}},
+		{true, "enterapotentpot", []string{"a", "p", "ent", "enter", "ot", "o", "t"}},
+	}
+
+	hardCase := Tests{
+		false, "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeet", []string{"e", "ee", "eee", "eeee"},
+	}
+	testPairs = append(testPairs, hardCase)
+
+	for _, p := range testPairs {
+		assert.Equal(t, p.expected, canConstructTabulized(p.s, p.elements))
 	}
 }
