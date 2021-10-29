@@ -79,10 +79,13 @@ func (s *Stack) push(node Node) {
 	s.stack = append(s.stack, node)
 }
 
-func (s *Stack) pop() Node {
+func (s *Stack) pop() *Node {
+	if len(s.stack) == 0 {
+		return &Node{}
+	}
 	result := s.stack[len(s.stack)-1]
 	s.stack = s.stack[:len(s.stack)-1]
-	return result
+	return &result
 }
 
 func (s *Stack) isEmpty() bool {
@@ -191,3 +194,34 @@ func Test_DFV(t *testing.T) {
 }
 
 // Problem 3. Breadth First Traversal
+// Using queue instead of stack (FIFO)
+
+// popFirst - returns first element of Stack - FIFO behaviour for Stack struct
+func (s *Stack) popFirst() *Node {
+	if len(s.stack) == 0 {
+		return &Node{}
+	}
+	result := s.stack[0]
+	s.stack = s.stack[1:len(s.stack)]
+	return &result
+}
+
+func Test_popFirst(t *testing.T) {
+
+	var s Stack
+
+	s.push(Node{value: "a"})
+	s.push(Node{value: "b"})
+	s.push(Node{value: "c"})
+	assert.Equal(t, "c", s.pop().value)
+	assert.Equal(t, "b", s.pop().value)
+	assert.Equal(t, "a", s.pop().value)
+
+	s.push(Node{value: "a"})
+	s.push(Node{value: "b"})
+	s.push(Node{value: "c"})
+	assert.Equal(t, "a", s.popFirst().value)
+	assert.Equal(t, "b", s.popFirst().value)
+	assert.Equal(t, "c", s.popFirst().value)
+	assert.Equal(t, &Node{}, s.popFirst())
+}
