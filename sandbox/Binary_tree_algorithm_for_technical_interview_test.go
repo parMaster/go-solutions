@@ -92,8 +92,12 @@ func (s *Stack) isEmpty() bool {
 /* Problem 1. Depth First Value
 - Using Depth First Traversal Algo
 - and LIFO Stack
-*/
 
+Linear time and space solution
+n = # of nodes
+Time complexity: O(n)
+Spce Complexity: O(n)
+*/
 func Test_dfv(t *testing.T) {
 
 	var tree = &Node{value: "a",
@@ -107,7 +111,6 @@ func Test_dfv(t *testing.T) {
 	}
 
 	var res string
-
 	var s Stack
 	s.push(*tree)
 
@@ -126,5 +129,42 @@ func Test_dfv(t *testing.T) {
 	}
 
 	assert.Equal(t, "abdecf", res)
+}
 
+// Extract it in the new method
+
+// linearDFV - performs linear time and space complexity depth for value algo, using lifo stack
+func (n *Node) linearDFV() []string {
+	var res []string
+
+	s := Stack{stack: []Node{*n}}
+
+	for !s.isEmpty() {
+		currentNode := s.pop()
+
+		res = append(res, string(currentNode.value))
+		if currentNode.right != nil {
+			s.push(*currentNode.right)
+		}
+
+		if currentNode.left != nil {
+			s.push(*currentNode.left)
+		}
+	}
+	return res
+}
+
+func Test_linearDFV(t *testing.T) {
+
+	var testTree = &Node{value: "a",
+		left: &Node{value: "b",
+			left:  &Node{value: "d"},
+			right: &Node{value: "e"},
+		},
+		right: &Node{value: "c",
+			right: &Node{value: "f"},
+		},
+	}
+
+	assert.Equal(t, []string{"a", "b", "d", "e", "c", "f"}, testTree.linearDFV())
 }
