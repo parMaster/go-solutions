@@ -133,16 +133,15 @@ func Test_dfv(t *testing.T) {
 
 // Extract it in the new method
 
-// linearDFV - performs linear time and space complexity depth for value algo, using lifo stack
+// linearDFV - performs linear time and space complexity depth for value algo, using LIFO stack
 func (n *Node) linearDFV() []string {
 	var res []string
 
 	s := Stack{stack: []Node{*n}}
-
 	for !s.isEmpty() {
 		currentNode := s.pop()
 
-		res = append(res, string(currentNode.value))
+		res = append(res, currentNode.value)
 		if currentNode.right != nil {
 			s.push(*currentNode.right)
 		}
@@ -154,7 +153,24 @@ func (n *Node) linearDFV() []string {
 	return res
 }
 
-func Test_linearDFV(t *testing.T) {
+// Problem 2 - Recursive tree traversal
+// recursiveDFV ...
+func (n *Node) recursiveDFV() []string {
+
+	var leftValues []string
+	if n.left != nil {
+		leftValues = n.left.recursiveDFV()
+	}
+
+	var rightValues []string
+	if n.right != nil {
+		rightValues = n.right.recursiveDFV()
+	}
+
+	return append([]string{n.value}, append(leftValues, rightValues...)...)
+}
+
+func Test_DFV(t *testing.T) {
 
 	var testTree = &Node{value: "a",
 		left: &Node{value: "b",
@@ -167,4 +183,11 @@ func Test_linearDFV(t *testing.T) {
 	}
 
 	assert.Equal(t, []string{"a", "b", "d", "e", "c", "f"}, testTree.linearDFV())
+
+	var emptyTree = &Node{}
+	assert.Equal(t, []string{""}, emptyTree.linearDFV())
+
+	assert.Equal(t, []string{"a", "b", "d", "e", "c", "f"}, testTree.recursiveDFV())
 }
+
+// Problem 3. Breadth First Traversal
