@@ -1,9 +1,10 @@
 package sandbox
 
 type Node struct {
-	value string
-	left  *Node
-	right *Node
+	value    string
+	intValue int
+	left     *Node
+	right    *Node
 }
 
 // Stack helper struct with push and pop methods

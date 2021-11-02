@@ -268,15 +268,57 @@ func (n *Node) TreeIncludesDFS_Recursive(value string) bool {
 	return result
 }
 
+// Problem 5. Tree Sum
+// return sum of numeric node values
+func (n *Node) treeSum_Recursive() int {
+	var result int
+
+	result += n.intValue
+
+	if n.right != nil {
+		result += n.right.treeSum_Recursive()
+	}
+
+	if n.left != nil {
+		result += n.left.treeSum_Recursive()
+	}
+
+	return result
+}
+
+func (n *Node) treeSum() int {
+	var result int
+
+	s := NewStack()
+	s.push(*n)
+
+	for !s.isEmpty() {
+
+		currentNode := s.popFirst()
+
+		result += currentNode.intValue
+
+		if n.right != nil {
+			result += n.right.treeSum()
+		}
+
+		if n.left != nil {
+			result += n.left.treeSum()
+		}
+	}
+
+	return result
+}
+
 func Test_Tests(t *testing.T) {
 
-	var testTree = &Node{value: "a",
-		left: &Node{value: "b",
-			left:  &Node{value: "d"},
-			right: &Node{value: "e"},
+	var testTree = &Node{value: "a", intValue: 3,
+		left: &Node{value: "b", intValue: 11,
+			left:  &Node{value: "d", intValue: 4},
+			right: &Node{value: "e", intValue: 2},
 		},
-		right: &Node{value: "c",
-			right: &Node{value: "f"},
+		right: &Node{value: "c", intValue: 4,
+			right: &Node{value: "f", intValue: 1},
 		},
 	}
 
@@ -301,4 +343,6 @@ func Test_Tests(t *testing.T) {
 		assert.Equal(t, searchTests[i].expected, searchTests[i].tree.TreeIncludesDFS_Recursive(searchTests[i].needle))
 	}
 
+	assert.Equal(t, 25, testTree.treeSum_Recursive())
+	assert.Equal(t, 25, testTree.treeSum())
 }
