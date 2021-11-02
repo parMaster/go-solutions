@@ -43,12 +43,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type Node struct {
-	value string
-	left  *Node
-	right *Node
-}
-
 func Test_CreateTreeManually(t *testing.T) {
 
 	var n Node
@@ -70,28 +64,6 @@ func Test_CreateTreeManually(t *testing.T) {
 	fmt.Println(tree.left.right)
 }
 
-// Stack helper struct with push and pop methods
-type Stack struct {
-	stack []Node
-}
-
-func (s *Stack) push(node Node) {
-	s.stack = append(s.stack, node)
-}
-
-func (s *Stack) pop() *Node {
-	if len(s.stack) == 0 {
-		return &Node{}
-	}
-	result := s.stack[len(s.stack)-1]
-	s.stack = s.stack[:len(s.stack)-1]
-	return &result
-}
-
-func (s *Stack) isEmpty() bool {
-	return len(s.stack) == 0
-}
-
 /* Problem 1. Depth First Value
 - Using Depth First Traversal Algo
 - and LIFO Stack
@@ -103,7 +75,7 @@ Spce Complexity: O(n)
 */
 func Test_dfv(t *testing.T) {
 
-	var tree = &Node{value: "a",
+	var tree = Node{value: "a",
 		left: &Node{value: "b",
 			left:  &Node{value: "d"},
 			right: &Node{value: "e"},
@@ -114,8 +86,8 @@ func Test_dfv(t *testing.T) {
 	}
 
 	var res string
-	var s Stack
-	s.push(*tree)
+	s := NewStack()
+	s.push(tree)
 
 	for !s.isEmpty() {
 
@@ -140,7 +112,9 @@ func Test_dfv(t *testing.T) {
 func (n *Node) linearDFV() []string {
 	var res []string
 
-	s := Stack{stack: []Node{*n}}
+	s := NewStack()
+	s.push(*n)
+
 	for !s.isEmpty() {
 		currentNode := s.pop()
 
@@ -194,34 +168,41 @@ func Test_DFV(t *testing.T) {
 }
 
 // Problem 3. Breadth First Traversal
-// Using queue instead of stack (FIFO)
+// Using  queue instead of stack (FIFO)
+func (n *Node) BreadthFirstTraversal() []string {
+	var result []string
 
-// popFirst - returns first element of Stack - FIFO behaviour for Stack struct
-func (s *Stack) popFirst() *Node {
-	if len(s.stack) == 0 {
-		return &Node{}
+	s := NewStack()
+	s.push(*n)
+
+	for !s.isEmpty() {
+
+		current := s.popFirst()
+
+		result = append(result, current.value)
+
+		if current.left != nil {
+			s.push(*current.left)
+		}
+		if current.right != nil {
+			s.push(*current.right)
+		}
 	}
-	result := s.stack[0]
-	s.stack = s.stack[1:len(s.stack)]
-	return &result
+
+	return result
 }
 
-func Test_popFirst(t *testing.T) {
+func Test_BFT(t *testing.T) {
 
-	var s Stack
+	var testTree = &Node{value: "a",
+		left: &Node{value: "b",
+			left:  &Node{value: "d"},
+			right: &Node{value: "e"},
+		},
+		right: &Node{value: "c",
+			right: &Node{value: "f"},
+		},
+	}
 
-	s.push(Node{value: "a"})
-	s.push(Node{value: "b"})
-	s.push(Node{value: "c"})
-	assert.Equal(t, "c", s.pop().value)
-	assert.Equal(t, "b", s.pop().value)
-	assert.Equal(t, "a", s.pop().value)
-
-	s.push(Node{value: "a"})
-	s.push(Node{value: "b"})
-	s.push(Node{value: "c"})
-	assert.Equal(t, "a", s.popFirst().value)
-	assert.Equal(t, "b", s.popFirst().value)
-	assert.Equal(t, "c", s.popFirst().value)
-	assert.Equal(t, &Node{}, s.popFirst())
+	assert.Equal(t, []string{"a", "b", "c", "d", "e", "f"}, testTree.BreadthFirstTraversal())
 }
