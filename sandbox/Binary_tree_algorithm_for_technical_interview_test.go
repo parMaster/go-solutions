@@ -192,7 +192,83 @@ func (n *Node) BreadthFirstTraversal() []string {
 	return result
 }
 
-func Test_BFT(t *testing.T) {
+// Problem 4. Tree Includes
+// Given the value, check if there is a node with such value
+
+// Breadth-first search
+func (n *Node) TreeIncludesBFS(value string) bool {
+
+	s := NewStack()
+	s.push(*n)
+
+	for !s.isEmpty() {
+
+		current := s.popFirst()
+
+		if current.value == value {
+			return true
+		}
+
+		if current.left != nil {
+			s.push(*current.left)
+		}
+
+		if current.right != nil {
+			s.push(*current.right)
+		}
+	}
+
+	return false
+}
+
+// Depth-first search
+func (n *Node) TreeIncludesDFS(value string) bool {
+
+	s := NewStack()
+	s.push(*n)
+
+	for !s.isEmpty() {
+		currentNode := s.pop()
+
+		if currentNode.value == value {
+			return true
+		}
+
+		if currentNode.right != nil {
+			s.push(*currentNode.right)
+		}
+
+		if currentNode.left != nil {
+			s.push(*currentNode.left)
+		}
+	}
+
+	return false
+}
+
+// Depth-first search Recursivly
+func (n *Node) TreeIncludesDFS_Recursive(value string) bool {
+	result := false
+
+	if n == nil {
+		return false
+	}
+
+	if n.value == value {
+		return true
+	}
+
+	if n.right != nil {
+		result = result || n.right.TreeIncludesDFS_Recursive(value)
+	}
+	if n.left != nil {
+		result = result || n.left.TreeIncludesDFS_Recursive(value)
+	}
+
+	return result
+}
+
+func Test_Tests(t *testing.T) {
 
 	var testTree = &Node{value: "a",
 		left: &Node{value: "b",
@@ -204,5 +280,25 @@ func Test_BFT(t *testing.T) {
 		},
 	}
 
+	var emptyTree = &Node{}
+
 	assert.Equal(t, []string{"a", "b", "c", "d", "e", "f"}, testTree.BreadthFirstTraversal())
+
+	searchTests := []struct {
+		tree     Node
+		needle   string
+		expected bool
+	}{
+		{tree: *testTree, needle: "e", expected: true},
+		{tree: *testTree, needle: "not there", expected: false},
+		{tree: *testTree, needle: "", expected: false},
+		{tree: *emptyTree, needle: "asd", expected: false},
+	}
+
+	for i := range searchTests {
+		assert.Equal(t, searchTests[i].expected, searchTests[i].tree.TreeIncludesBFS(searchTests[i].needle))
+		assert.Equal(t, searchTests[i].expected, searchTests[i].tree.TreeIncludesDFS(searchTests[i].needle))
+		assert.Equal(t, searchTests[i].expected, searchTests[i].tree.TreeIncludesDFS_Recursive(searchTests[i].needle))
+	}
+
 }
