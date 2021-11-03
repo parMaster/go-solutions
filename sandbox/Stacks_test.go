@@ -23,7 +23,12 @@ func Test_StringStack(t *testing.T) {
 	s.push("y")
 	s.push("z")
 
+	assert.Equal(t, "z", s.peek())
+	assert.Equal(t, "z", s.peek())
+	assert.Equal(t, "z", s.peek())
+
 	assert.Equal(t, "x", s.popFirst())
+	assert.Equal(t, "z", s.peek())
 	assert.Equal(t, "y", s.popFirst())
 	assert.Equal(t, "z", s.popFirst())
 
