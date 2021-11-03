@@ -38,6 +38,7 @@ package sandbox
 
 import (
 	"fmt"
+	"math/rand"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -352,6 +353,76 @@ func (n *Node) treeMin() int {
 	return result
 }
 
+// returns a leafful binary tree _howTall_ levels tall (deep)
+func gimmeBigTree(howTall int) *Node {
+
+	n := Node{
+		intValue: rand.Intn(99-9) + 9, // 9..99 random int
+	}
+
+	howTall--
+	if howTall < 0 {
+		return nil
+	}
+	n.left = gimmeBigTree(howTall)
+	n.right = gimmeBigTree(howTall)
+
+	return &n
+}
+
+// Problem 7. Max Root-to-Leaf path sum
+func (n *Node) maxRootToLeafPathSum(currentSum int) int {
+
+	currentSum += n.intValue
+
+	if n.left == nil &&
+		n.right == nil {
+		// then it's a leaf node
+
+		return currentSum
+	}
+
+	leftSum := 0
+	if n.left != nil {
+		leftSum = n.left.maxRootToLeafPathSum(currentSum)
+	}
+
+	rightSum := 0
+	if n.right != nil {
+		rightSum = n.right.maxRootToLeafPathSum(currentSum)
+	}
+
+	if leftSum == min(leftSum, rightSum) {
+		return rightSum
+	}
+	return leftSum
+}
+
+// without dragging a parameter through the stack
+func (n *Node) maxRootToLeafPathSumV2() int {
+
+	if n.left == nil &&
+		n.right == nil {
+		// then it's a leaf node
+		return n.intValue
+	}
+
+	leftSum := 0
+	if n.left != nil {
+		leftSum = n.intValue + n.left.maxRootToLeafPathSumV2()
+	}
+
+	rightSum := 0
+	if n.right != nil {
+		rightSum = n.intValue + n.right.maxRootToLeafPathSumV2()
+	}
+
+	if leftSum == min(leftSum, rightSum) {
+		return rightSum
+	}
+	return leftSum
+}
+
 func Test_Everything(t *testing.T) {
 
 	var testTree = &Node{value: "a", intValue: 3,
@@ -394,4 +465,22 @@ func Test_Everything(t *testing.T) {
 	testTree.right.right.intValue = 99
 	assert.Equal(t, 2, testTree.treeMin_Recursive())
 	assert.Equal(t, 2, testTree.treeMin())
+
+	bigTree := gimmeBigTree(4)
+
+	assert.Equal(t, 16, bigTree.treeMin()) // 16 on MacBook right now
+
+	var maxPathTree = &Node{value: "a", intValue: 5,
+		left: &Node{value: "b", intValue: 11,
+			left:  &Node{value: "d", intValue: 4},
+			right: &Node{value: "e", intValue: 2},
+		},
+		right: &Node{value: "c", intValue: 3,
+			right: &Node{value: "f", intValue: 1},
+		},
+	}
+
+	assert.Equal(t, 20, maxPathTree.maxRootToLeafPathSum(0))
+	assert.Equal(t, 20, maxPathTree.maxRootToLeafPathSumV2())
+
 }
