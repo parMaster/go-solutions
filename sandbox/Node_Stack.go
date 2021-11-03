@@ -34,13 +34,13 @@ func (s *Stack) isEmpty() bool {
 }
 
 // popFirst - returns first element of Stack - FIFO behaviour for Stack struct
-func (s *Stack) popFirst() *Node {
+func (s *Stack) popFirst() Node {
 	if len(s.stack) == 0 {
-		return &Node{}
+		return Node{}
 	}
 	result := s.stack[0]
 	s.stack = s.stack[1:len(s.stack)]
-	return &result
+	return result
 }
 
 /*

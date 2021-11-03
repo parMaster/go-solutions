@@ -310,7 +310,49 @@ func (n *Node) treeSum() int {
 	return result
 }
 
-func Test_Tests(t *testing.T) {
+// Problem 6. Tree min value
+// Find the smallest value node in the tree
+func (n *Node) treeMin_Recursive() int {
+	var result int = 1<<32 - 1
+
+	result = min(result, n.intValue)
+
+	if n.right != nil {
+		result = min(result, n.right.treeMin_Recursive())
+	}
+
+	if n.left != nil {
+		result = min(result, n.left.treeMin_Recursive())
+	}
+
+	return result
+}
+
+// Same, iteratively
+func (n *Node) treeMin() int {
+	var result int = 1<<32 - 1
+
+	s := NewStack()
+	s.push(*n)
+
+	for !s.isEmpty() {
+		currentNode := s.popFirst()
+
+		result = min(result, currentNode.intValue)
+
+		if currentNode.left != nil {
+			s.push(*currentNode.left)
+		}
+
+		if currentNode.right != nil {
+			s.push(*currentNode.right)
+		}
+	}
+
+	return result
+}
+
+func Test_Everything(t *testing.T) {
 
 	var testTree = &Node{value: "a", intValue: 3,
 		left: &Node{value: "b", intValue: 11,
@@ -345,4 +387,11 @@ func Test_Tests(t *testing.T) {
 
 	assert.Equal(t, 25, testTree.treeSum_Recursive())
 	assert.Equal(t, 25, testTree.treeSum())
+
+	assert.Equal(t, 1, testTree.treeMin_Recursive())
+	assert.Equal(t, 1, testTree.treeMin())
+
+	testTree.right.right.intValue = 99
+	assert.Equal(t, 2, testTree.treeMin_Recursive())
+	assert.Equal(t, 2, testTree.treeMin())
 }
