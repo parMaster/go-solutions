@@ -482,5 +482,4 @@ func Test_Everything(t *testing.T) {
 
 	assert.Equal(t, 20, maxPathTree.maxRootToLeafPathSum(0))
 	assert.Equal(t, 20, maxPathTree.maxRootToLeafPathSumV2())
-
 }
