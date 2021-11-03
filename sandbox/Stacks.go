@@ -4,12 +4,15 @@ type StackV2 struct {
 	items []interface{}
 }
 
+// Value semantics for factory function
 func NewStackV2() StackV2 {
 	return StackV2{}
 }
 
+// Pointer semantics for everything else
+
 // push ...
-func (s *StackV2) push(elem string) {
+func (s *StackV2) push(elem interface{}) {
 	s.items = append(s.items, elem)
 }
 
@@ -23,7 +26,7 @@ func (s *StackV2) pop() interface{} {
 	return result
 }
 
-// peek ...
+// peek - pop without popping
 func (s *StackV2) peek() interface{} {
 	if len(s.items) == 0 {
 		return ""
