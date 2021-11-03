@@ -30,9 +30,8 @@ import (
 	key: string; value: array of strings
 */
 type graph map[string][]string
-type anyGraph map[interface{}][]interface{}
 
-// OR DO AN INHERITANCE kind of thing -  graph can be string graph or int graph
+// OR DO AN POLYMORPHISM kind of thing -  graph can be string graph or int graph
 
 // Problem 1. Depth-First Traversal (breadth-first as well)
 
@@ -88,34 +87,7 @@ func (g graph) traverse(source string, f func(currentNode string)) {
 	}
 }
 
-func (g graph) other_traverse(source string) []string {
-	result := []string{}
-
-	if g[source] == nil {
-		return result
-	}
-
-	s := NewStackV2()
-	s.push(source)
-
-	for !s.isEmpty() {
-
-		// currentNode := fmt.Sprint(s.popFirst()) // - breadth-fist traversal
-		currentNode := fmt.Sprint(s.pop()) // - depth-first traversal
-
-		// fmt.Sprint(s.popFirst()) - the only(?) downside of using {} stack
-
-		result = append(result, currentNode)
-
-		if len(g[currentNode]) != 0 {
-			for _, v := range g[currentNode] {
-				s.push(v)
-			}
-		}
-	}
-
-	return result
-}
+type anyGraph map[interface{}][]interface{}
 
 func (g anyGraph) traverse(source interface{}, f func(currentNode interface{})) {
 
