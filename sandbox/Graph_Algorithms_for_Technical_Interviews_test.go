@@ -29,7 +29,7 @@ import (
 	hash table like
 	key: string; value: array of strings
 */
-type graph map[string][]string
+type strGraph map[string][]string
 
 // OR DO AN POLYMORPHISM kind of thing -  graph can be string graph or int graph
 
@@ -37,7 +37,7 @@ type graph map[string][]string
 
 // Iterative, intuitive method
 // in Value Semantics
-func (g graph) depthFirstTraversal(source string) []string {
+func (g strGraph) depthFirstTraversal(source string) []string {
 	result := []string{}
 
 	if g[source] == nil {
@@ -72,7 +72,7 @@ func (g graph) depthFirstTraversal(source string) []string {
 // like filepath.WalkDir !
 // traversal(func(){})
 
-func (g graph) traverse(source string, f func(currentNode string)) {
+func (g strGraph) traverse(source string, f func(currentNode string)) {
 
 	s := NewStackV2()
 	s.push(source)
@@ -106,7 +106,7 @@ func (g anyGraph) traverse(source interface{}, f func(currentNode interface{})) 
 
 func Test_Part1(t *testing.T) {
 
-	g := graph{
+	g := strGraph{
 		"a": {"b", "c"},
 		"b": {"d"},
 		"c": {"e"},
@@ -160,7 +160,7 @@ func Test_Part1(t *testing.T) {
 }
 
 // Problem 2 - has path
-// is there a path from source to destination in a acyclic graph
+// is there a path from source to destination in an acyclic graph
 // I'll utilize a .traverse method of anyGraph type
 func (g anyGraph) hasPath(source, destination string) bool {
 	var result bool = false
@@ -189,3 +189,49 @@ func Test_hasPath(t *testing.T) {
 }
 
 // How could polymorphic graph of anything be implemented ??
+/*
+type graph interface {
+	iStrGraph
+	iNumGraph
+}
+
+type iStrGraph interface {
+	traverse(param string)
+}
+type iNumGraph interface {
+	traverse(param int)
+}
+
+// doesn't work this way - method signatures are different
+// how is it better than using interface{} type?
+
+type lettersGraph map[string][]string
+type numbersGraph map[int][]int
+
+func (l *lettersGraph) traverse(param string) {
+	fmt.Println("traversing letters graph")
+}
+
+func (n *numbersGraph) traverse(param int) {
+	fmt.Println("traversing numbers graph")
+}
+
+func traverse(g graph, param interface{}) {
+	g.traverse(param)
+}
+
+func Test_traverseInterfaces(t *testing.T) {
+
+	var numbers graph = &numbersGraph{}
+	var letters graph = &lettersGraph{}
+
+	numbers.traverse()
+	letters.traverse()
+}
+
+// "Surprisingly", animal-cat-dog example didn't help at all
+*/
+
+// Problem 3. Undirected path
+// Finding path in undirected graph. Every edge is bi-directional
+// Mind the cycles
