@@ -392,10 +392,7 @@ func (n *Node) maxRootToLeafPathSum(currentSum int) int {
 		rightSum = n.right.maxRootToLeafPathSum(currentSum)
 	}
 
-	if leftSum == min(leftSum, rightSum) {
-		return rightSum
-	}
-	return leftSum
+	return max(leftSum, rightSum)
 }
 
 // without dragging a parameter through the stack
