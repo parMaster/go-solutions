@@ -255,6 +255,13 @@ func (g edgesListGraph) asAnyGraph() anyGraph { // love this
 		} else {
 			a[v.from] = []interface{}{v.to}
 		}
+
+		_, ok = a[v.to]
+		if ok {
+			a[v.to] = append(a[v.to], v.from)
+		} else {
+			a[v.to] = []interface{}{v.from}
+		}
 	}
 
 	return a
@@ -271,10 +278,14 @@ func Test_conversions(t *testing.T) {
 	}
 
 	ag := anyGraph{
-		"i": {"j"},
-		"k": {"i", "l"},
+		"i": {"j", "k"},
+		"j": {"i"},
+		"k": {"i", "m", "l"},
 		"m": {"k"},
+		"l": {"k"},
+
 		"o": {"n"},
+		"n": {"o"},
 	}
 
 	assert.Equal(t, ag, g.asAnyGraph())
