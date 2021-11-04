@@ -372,14 +372,14 @@ func (g anyGraph) countComponents() int {
 func Test_countComponents(t *testing.T) {
 
 	g := edgesListGraph{
-		edge{"a", "b"},
+		{"a", "b"},
 
-		edge{"c", "d"},
-		edge{"c", "e"},
-		edge{"c", "f"},
-		edge{"c", "g"},
+		{"c", "d"},
+		{"c", "e"},
+		{"c", "f"},
+		{"c", "g"},
 
-		edge{"o", "o"},
+		{"o", "o"},
 	}
 
 	g.asAnyGraph().traverseOnce("o", func(currentNode interface{}) {
