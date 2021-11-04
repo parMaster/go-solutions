@@ -235,3 +235,47 @@ func Test_traverseInterfaces(t *testing.T) {
 // Problem 3. Undirected path
 // Finding path in undirected graph. Every edge is bi-directional
 // Mind the cycles
+
+// array of edges to adjacency list conversion
+
+type edge struct {
+	from string
+	to   string
+}
+
+type edgesListGraph []edge
+
+func (g edgesListGraph) asAnyGraph() anyGraph { // love this
+
+	a := anyGraph{}
+	for _, v := range g {
+		_, ok := a[v.from]
+		if ok {
+			a[v.from] = append(a[v.from], v.to)
+		} else {
+			a[v.from] = []interface{}{v.to}
+		}
+	}
+
+	return a
+}
+
+func Test_conversions(t *testing.T) {
+
+	g := edgesListGraph{
+		edge{"i", "j"},
+		edge{"k", "i"},
+		edge{"m", "k"},
+		edge{"k", "l"},
+		edge{"o", "n"},
+	}
+
+	ag := anyGraph{
+		"i": {"j"},
+		"k": {"i", "l"},
+		"m": {"k"},
+		"o": {"n"},
+	}
+
+	assert.Equal(t, ag, g.asAnyGraph())
+}
