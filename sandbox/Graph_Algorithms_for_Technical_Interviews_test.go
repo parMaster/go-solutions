@@ -52,7 +52,7 @@ func (g graph) depthFirstTraversal(source string) []string {
 		// currentNode := fmt.Sprint(s.popFirst()) // - breadth-fist traversal
 		currentNode := fmt.Sprint(s.pop()) // - depth-first traversal
 
-		// fmt.Sprint(s.popFirst()) - the only(?) downside of using {} stack
+		// fmt.Sprint(s.popFirst()) - the only(?) downside of stack of interface{}
 
 		result = append(result, currentNode)
 
@@ -158,3 +158,34 @@ func Test_Part1(t *testing.T) {
 	})
 
 }
+
+// Problem 2 - has path
+// is there a path from source to destination in a acyclic graph
+// I'll utilize a .traverse method of anyGraph type
+func (g anyGraph) hasPath(source, destination string) bool {
+	var result bool = false
+	g.traverse(source, func(currentNode interface{}) {
+		strVal, ok := currentNode.(string)
+		if ok && strVal == destination {
+			result = true
+		}
+	})
+	return result
+}
+
+func Test_hasPath(t *testing.T) {
+
+	pathGraph := anyGraph{
+		"f": {"g", "i"},
+		"g": {"h"},
+		"h": {},
+		"i": {"g", "k"},
+		"j": {"i"},
+		"k": {},
+	}
+
+	assert.Equal(t, true, pathGraph.hasPath("f", "k"))
+	assert.Equal(t, false, pathGraph.hasPath("f", "j"))
+}
+
+// How could polymorphic graph of anything be implemented ??
