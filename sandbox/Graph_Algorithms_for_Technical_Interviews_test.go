@@ -272,6 +272,7 @@ func Test_conversions(t *testing.T) {
 	g := edgesListGraph{
 		edge{"i", "j"},
 		edge{"k", "i"},
+		edge{"k", "j"},
 		edge{"m", "k"},
 		edge{"k", "l"},
 		edge{"o", "n"},
@@ -279,8 +280,8 @@ func Test_conversions(t *testing.T) {
 
 	ag := anyGraph{
 		"i": {"j", "k"},
-		"j": {"i"},
-		"k": {"i", "m", "l"},
+		"j": {"i", "k"},
+		"k": {"i", "j", "m", "l"},
 		"m": {"k"},
 		"l": {"k"},
 
@@ -289,4 +290,49 @@ func Test_conversions(t *testing.T) {
 	}
 
 	assert.Equal(t, ag, g.asAnyGraph())
+
+	assert.Equal(t, true, g.undirectedPath("j", "m"))
+	assert.Equal(t, true, g.undirectedPath("m", "m"))
+	assert.Equal(t, true, g.undirectedPath("o", "n"))
+	assert.Equal(t, true, g.undirectedPath("n", "o"))
+
+	assert.Equal(t, false, g.undirectedPath("n", "m"))
+	assert.Equal(t, false, g.undirectedPath("m", "n"))
+}
+
+// traversing graph once, keeps history of visited nodes and minds the cycles
+func (g anyGraph) traverseOnce(source interface{}, f func(currentNode interface{})) {
+
+	s := NewStackV2()
+	s.push(source)
+
+	history := make(map[string]bool)
+
+	for !s.isEmpty() {
+		currentNode := s.popFirst()
+		current := currentNode.(string) // assume there is a string. Will cause panic if there's something else!
+		f(currentNode)
+		for _, v := range g[currentNode] {
+			_, ok := history[v.(string)] // same
+			if !ok {
+				s.push(v)
+
+				history[current] = true
+			}
+		}
+
+	}
+}
+
+func (g *edgesListGraph) undirectedPath(from, to string) bool {
+
+	var result bool
+
+	g.asAnyGraph().traverseOnce(from, func(currentNode interface{}) {
+		current, ok := currentNode.(string)
+		if ok && to == current {
+			result = true
+		}
+	})
+	return result
 }
