@@ -307,6 +307,7 @@ func (g anyGraph) traverseOnce(source interface{}, f func(currentNode interface{
 	s.push(source)
 
 	history := make(map[string]bool)
+	history[source.(string)] = true
 
 	for !s.isEmpty() {
 		currentNode := s.popFirst()
@@ -324,10 +325,11 @@ func (g anyGraph) traverseOnce(source interface{}, f func(currentNode interface{
 	}
 }
 
+// undirected path returns true if there is a path from to
+// note: traverses all the nodes always, even if the path is found right away
 func (g *edgesListGraph) undirectedPath(from, to string) bool {
 
 	var result bool
-
 	g.asAnyGraph().traverseOnce(from, func(currentNode interface{}) {
 		current, ok := currentNode.(string)
 		if ok && to == current {
@@ -335,4 +337,62 @@ func (g *edgesListGraph) undirectedPath(from, to string) bool {
 		}
 	})
 	return result
+}
+
+// Flattens the graph to a map
+func (g anyGraph) nodesList() map[string]bool {
+	result := make(map[string]bool)
+	for k, v := range g {
+		result[k.(string)] = false
+		if len(v) != 0 {
+			for _, vv := range v {
+				result[vv.(string)] = false
+			}
+		}
+	}
+	return result
+}
+
+// Problem 4. Connected components count
+func (g anyGraph) countComponents() int {
+	flatGraph := g.nodesList()
+
+	result := 0
+	for node, visited := range flatGraph {
+		if !visited {
+			result++
+			g.traverseOnce(node, func(currentNode interface{}) {
+				flatGraph[currentNode.(string)] = true
+			})
+		}
+	}
+	return result
+}
+
+func Test_countComponents(t *testing.T) {
+
+	g := edgesListGraph{
+		edge{"a", "b"},
+
+		edge{"c", "d"},
+		edge{"c", "e"},
+		edge{"c", "f"},
+		edge{"c", "g"},
+
+		edge{"o", "o"},
+	}
+
+	g.asAnyGraph().traverseOnce("o", func(currentNode interface{}) {
+		fmt.Println(currentNode.(string))
+	})
+
+	g.asAnyGraph().traverseOnce("a", func(currentNode interface{}) {
+		fmt.Println(currentNode.(string))
+	})
+
+	g.asAnyGraph().traverseOnce("d", func(currentNode interface{}) {
+		fmt.Println(currentNode.(string))
+	})
+
+	assert.Equal(t, 3, g.asAnyGraph().countComponents())
 }
