@@ -1011,13 +1011,10 @@ func countConstructTab(target string, elements []string) int {
 		subTarget = target[i:]
 
 		for _, elem := range elements {
-
 			if strings.HasPrefix(subTarget, elem) {
 				m[i+len(elem)] += m[i]
 			}
-
 		}
-
 	}
 
 	return m[len(target)]
@@ -1088,11 +1085,8 @@ func allConstructTab(target string, elements []string) [][]string {
 				for _, v := range m[i] {
 					m[futurePos] = append(m[futurePos], append(v, elem))
 				}
-
 			}
-
 		}
-
 	}
 
 	return m[len(target)]
