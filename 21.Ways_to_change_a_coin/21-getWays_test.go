@@ -7,12 +7,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// getWays from HackerRank
+// getWays on HackerRank
 func getWays(n int32, c []int64) int64 {
-
 	dp := make([]int64, n+1)
 	dp[0] = 1
-	for i, _ := range c {
+	for i := range c {
 		for j := c[i]; j <= int64(n); j++ {
 			dp[j] += dp[j-c[i]]
 		}
@@ -33,8 +32,11 @@ func Test_getWays(t *testing.T) {
 		{int64(96190959), 166, []int64{5, 37, 8, 39, 33, 17, 22, 32, 13, 7, 10, 35, 40, 2, 43, 49, 46, 19, 41, 1, 12, 11, 28}},
 	}
 
+	for _, p := range testPairs[0:2] { // skipping last hard case for recursive solution
+		assert.Equal(t, p.expected, getWays_recursive(p.targetSum, p.numbers))
+	}
+
 	for _, p := range testPairs {
-		// memo := make(map[int][]int)
 		assert.Equal(t, p.expected, getWays(p.targetSum, p.numbers))
 	}
 
@@ -83,7 +85,7 @@ i==4, coins[4] == 6
 
 */
 
-// works perfectly at fast machines with long stacks
+// Works perfectly on fast machines with long stacks
 // but results in half of the tests being failed due to time limit
 func getWays_recursive(n int32, c []int64) int64 {
 
@@ -97,7 +99,7 @@ func getWays_recursive(n int32, c []int64) int64 {
 
 	var ways int64 = 0
 	for i, v := range c {
-		ways += getWays(n-int32(v), c[i:])
+		ways += getWays_recursive(n-int32(v), c[i:])
 	}
 
 	return ways
