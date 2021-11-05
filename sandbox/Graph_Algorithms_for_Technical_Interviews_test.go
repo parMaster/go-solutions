@@ -307,21 +307,19 @@ func (g anyGraph) traverseOnce(source interface{}, f func(currentNode interface{
 	s.push(source)
 
 	history := make(map[string]bool)
-	history[source.(string)] = true
 
 	for !s.isEmpty() {
 		currentNode := s.popFirst()
-		current := currentNode.(string) // assume there is a string. Will cause panic if there's something else!
-		f(currentNode)
+		if !history[currentNode.(string)] {
+			f(currentNode)
+			history[currentNode.(string)] = true
+		}
 		for _, v := range g[currentNode] {
-			_, ok := history[v.(string)] // same
+			_, ok := history[v.(string)]
 			if !ok {
 				s.push(v)
-
-				history[current] = true
 			}
 		}
-
 	}
 }
 
@@ -395,4 +393,42 @@ func Test_countComponents(t *testing.T) {
 	})
 
 	assert.Equal(t, 3, g.asAnyGraph().countComponents())
+}
+
+// Problem 5. Largest component
+func (g anyGraph) largestComponent() int {
+	flatGraph := g.nodesList()
+
+	var largest int = 0
+	for node, visited := range flatGraph {
+		if !visited {
+			result := 0
+			g.traverseOnce(node, func(currentNode interface{}) {
+				result++
+				flatGraph[currentNode.(string)] = true
+			})
+			largest = max(largest, result)
+		}
+	}
+	return largest
+}
+
+func Test_largestComponent(t *testing.T) {
+
+	twoComponentGraph := anyGraph{
+		"0": {"1", "5", "8"},
+		"1": {"0"},
+		"5": {"0", "8"},
+		"8": {"0", "5"},
+
+		"4": {"2", "3"},
+		"2": {"3", "4"},
+		"3": {"2", "4"},
+	}
+
+	twoComponentGraph.traverseOnce("8", func(currentNode interface{}) {
+		fmt.Print(currentNode.(string))
+	})
+
+	assert.Equal(t, 4, twoComponentGraph.largestComponent())
 }
