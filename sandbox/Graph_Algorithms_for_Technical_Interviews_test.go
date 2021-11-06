@@ -432,3 +432,73 @@ func Test_largestComponent(t *testing.T) {
 
 	assert.Equal(t, 4, twoComponentGraph.largestComponent())
 }
+
+func adder() func(int) int {
+	sum := 0
+	return func(x int) int {
+		sum += x
+		return sum
+	}
+}
+
+func (g anyGraph) flatten() []string {
+	var flatGraph []string
+	g.traverseOnce("w", func(currentNode interface{}) {
+		flatGraph = append(flatGraph, currentNode.(string))
+	})
+	return flatGraph
+}
+
+// Problem 6. Shortest path
+// from scratch
+func (g anyGraph) shortestPath(from, to string) int {
+
+	type queueElement struct {
+		node   string
+		lenght int
+	}
+
+	flatGraph := g.flatten()
+
+	history := make(map[string]bool, len(flatGraph))
+
+	s := NewStackV2()
+	s.push(queueElement{from, 0})
+	for !s.isEmpty() {
+
+		current := s.pop().(queueElement)
+
+		if current.node == to {
+			return current.lenght
+		}
+
+		for _, neighbour := range g[current.node] {
+
+			_, visited := history[neighbour.(string)]
+			if visited {
+				continue
+			}
+
+			s.push(queueElement{neighbour.(string), current.lenght + 1})
+		}
+	}
+	return 0
+}
+
+func Test_shortestPath(t *testing.T) {
+
+	g := edgesListGraph{
+		{"w", "x"},
+		{"x", "y"},
+		{"y", "z"},
+		{"z", "v"},
+		{"w", "v"},
+	}
+
+	flatGraph := g.asAnyGraph().flatten()
+
+	assert.Equal(t, []string{"w", "x", "v", "y", "z"}, flatGraph)
+
+	assert.Equal(t, 3, g.asAnyGraph().shortestPath("w", "z"))
+
+}
