@@ -450,7 +450,7 @@ func (g anyGraph) flatten() []string {
 }
 
 // Problem 6. Shortest path
-// from scratch
+// from scratch, not using traverseOnce etc.
 func (g anyGraph) shortestPath(from, to string) int {
 
 	type queueElement struct {
@@ -458,15 +458,15 @@ func (g anyGraph) shortestPath(from, to string) int {
 		lenght int
 	}
 
-	flatGraph := g.flatten()
-
-	history := make(map[string]bool, len(flatGraph))
+	history := map[string]bool{from: true}
 
 	s := NewStackV2()
 	s.push(queueElement{from, 0})
 	for !s.isEmpty() {
 
 		current := s.pop().(queueElement)
+
+		history[current.node] = true
 
 		if current.node == to {
 			return current.lenght
@@ -482,7 +482,7 @@ func (g anyGraph) shortestPath(from, to string) int {
 			s.push(queueElement{neighbour.(string), current.lenght + 1})
 		}
 	}
-	return 0
+	return -1
 }
 
 func Test_shortestPath(t *testing.T) {
@@ -499,6 +499,10 @@ func Test_shortestPath(t *testing.T) {
 
 	assert.Equal(t, []string{"w", "x", "v", "y", "z"}, flatGraph)
 
-	assert.Equal(t, 3, g.asAnyGraph().shortestPath("w", "z"))
+	assert.Equal(t, 2, g.asAnyGraph().shortestPath("w", "z"))
+	assert.Equal(t, 2, g.asAnyGraph().shortestPath("x", "z"))
+	assert.Equal(t, 0, g.asAnyGraph().shortestPath("z", "z"))
+	assert.Equal(t, 2, g.asAnyGraph().shortestPath("z", "w"))
+	assert.Equal(t, -1, g.asAnyGraph().shortestPath("zzz", "w"))
 
 }
