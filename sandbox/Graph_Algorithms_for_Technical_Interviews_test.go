@@ -527,7 +527,6 @@ func (g gridGraph) islandCount() int {
 				result++
 				g.explore(i, j, visited)
 			}
-
 		}
 	}
 
@@ -593,4 +592,80 @@ func Test_landCount(t *testing.T) {
 	}
 	assert.Equal(t, 0, test4.islandCount())
 
+}
+
+// Problem 8. Minimum island
+func (g gridGraph) minimumIsland() int {
+
+	var result int = 1<<32 - 1
+	visited := make([][]bool, len(g))
+
+	for i, row := range g {
+		visited[i] = make([]bool, len(row))
+	}
+
+	for i, row := range g {
+		for j, _ := range row {
+			if !visited[i][j] && g[i][j] == "L" {
+				// new island found
+				result = min(result, g.exploreAndCount(i, j, visited))
+			}
+		}
+	}
+
+	return result
+}
+
+func (g gridGraph) exploreAndCount(i, j int, visited [][]bool) int {
+
+	if 0 > i || i >= len(g) ||
+		0 > j || j >= len(g[0]) {
+		return 0
+	}
+
+	if g[i][j] == "W" {
+		return 0
+	}
+
+	if visited[i][j] {
+		return 0
+	}
+
+	visited[i][j] = true
+
+	return 1 + g.exploreAndCount(i+1, j, visited) +
+		g.exploreAndCount(i-1, j, visited) +
+		g.exploreAndCount(i, j+1, visited) +
+		g.exploreAndCount(i, j-1, visited)
+
+}
+
+func Test_minimumIsland(t *testing.T) {
+	// I love when it works on the first run
+
+	testGrid := gridGraph{
+		{"W", "L", "W", "W", "W"},
+		{"W", "L", "W", "W", "W"},
+		{"W", "W", "W", "L", "W"},
+		{"W", "W", "L", "L", "W"},
+		{"L", "W", "W", "L", "L"},
+		{"L", "L", "W", "W", "W"},
+	}
+	assert.Equal(t, 2, testGrid.minimumIsland())
+
+	test2 := gridGraph{
+		{"L", "W", "W", "L", "W"},
+		{"L", "W", "W", "L", "L"},
+		{"W", "L", "W", "L", "W"},
+		{"W", "W", "W", "W", "W"},
+		{"W", "W", "L", "L", "L"},
+	}
+	assert.Equal(t, 1, test2.minimumIsland())
+
+	test3 := gridGraph{
+		{"L", "L", "L"},
+		{"L", "L", "L"},
+		{"L", "L", "L"},
+	}
+	assert.Equal(t, 9, test3.minimumIsland())
 }
