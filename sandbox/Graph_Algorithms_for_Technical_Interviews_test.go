@@ -506,3 +506,91 @@ func Test_shortestPath(t *testing.T) {
 	assert.Equal(t, -1, g.asAnyGraph().shortestPath("zzz", "w"))
 
 }
+
+type gridGraph [][]string
+
+// Problem 7. Island count
+// connectedComponent analogue
+func (g gridGraph) islandCount() int {
+
+	var result int
+	visited := make([][]bool, len(g))
+
+	for i, row := range g {
+		visited[i] = make([]bool, len(row))
+	}
+
+	for i, row := range g {
+		for j, _ := range row {
+			if !visited[i][j] && g[i][j] == "L" {
+				// new island found
+				result++
+				g.explore(i, j, visited)
+			}
+
+		}
+	}
+
+	return result
+}
+
+func (g gridGraph) explore(i, j int, visited [][]bool) bool {
+
+	if 0 > i || i >= len(g) ||
+		0 > j || j >= len(g[0]) {
+		return false
+	}
+
+	if g[i][j] == "W" {
+		return false
+	}
+
+	if visited[i][j] {
+		return false
+	}
+
+	visited[i][j] = true
+
+	g.explore(i+1, j, visited)
+	g.explore(i-1, j, visited)
+	g.explore(i, j+1, visited)
+	g.explore(i, j-1, visited)
+	return true
+}
+
+func Test_landCount(t *testing.T) {
+
+	testGrid := gridGraph{
+		{"W", "L", "W", "W", "W"},
+		{"W", "L", "W", "W", "W"},
+		{"W", "W", "W", "L", "W"},
+		{"W", "W", "L", "L", "W"},
+		{"L", "W", "W", "L", "L"},
+		{"L", "L", "W", "W", "W"},
+	}
+	assert.Equal(t, 3, testGrid.islandCount())
+
+	test2 := gridGraph{
+		{"L", "W", "W", "L", "W"},
+		{"L", "W", "W", "L", "L"},
+		{"W", "L", "W", "L", "W"},
+		{"W", "W", "W", "W", "W"},
+		{"W", "W", "L", "L", "L"},
+	}
+	assert.Equal(t, 4, test2.islandCount())
+
+	test3 := gridGraph{
+		{"L", "L", "L"},
+		{"L", "L", "L"},
+		{"L", "L", "L"},
+	}
+	assert.Equal(t, 1, test3.islandCount())
+
+	test4 := gridGraph{
+		{"W", "W"},
+		{"W", "W"},
+		{"W", "W"},
+	}
+	assert.Equal(t, 0, test4.islandCount())
+
+}
