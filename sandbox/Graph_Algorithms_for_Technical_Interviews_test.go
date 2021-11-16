@@ -450,7 +450,7 @@ func (g anyGraph) flatten() []string {
 }
 
 // Problem 6. Shortest path
-// from scratch
+// from scratch, not using traverseOnce etc.
 func (g anyGraph) shortestPath(from, to string) int {
 
 	type queueElement struct {
@@ -458,15 +458,15 @@ func (g anyGraph) shortestPath(from, to string) int {
 		lenght int
 	}
 
-	flatGraph := g.flatten()
-
-	history := make(map[string]bool, len(flatGraph))
+	history := map[string]bool{from: true}
 
 	s := NewStackV2()
 	s.push(queueElement{from, 0})
 	for !s.isEmpty() {
 
 		current := s.pop().(queueElement)
+
+		history[current.node] = true
 
 		if current.node == to {
 			return current.lenght
@@ -482,7 +482,7 @@ func (g anyGraph) shortestPath(from, to string) int {
 			s.push(queueElement{neighbour.(string), current.lenght + 1})
 		}
 	}
-	return 0
+	return -1
 }
 
 func Test_shortestPath(t *testing.T) {
@@ -499,6 +499,173 @@ func Test_shortestPath(t *testing.T) {
 
 	assert.Equal(t, []string{"w", "x", "v", "y", "z"}, flatGraph)
 
-	assert.Equal(t, 3, g.asAnyGraph().shortestPath("w", "z"))
+	assert.Equal(t, 2, g.asAnyGraph().shortestPath("w", "z"))
+	assert.Equal(t, 2, g.asAnyGraph().shortestPath("x", "z"))
+	assert.Equal(t, 0, g.asAnyGraph().shortestPath("z", "z"))
+	assert.Equal(t, 2, g.asAnyGraph().shortestPath("z", "w"))
+	assert.Equal(t, -1, g.asAnyGraph().shortestPath("zzz", "w"))
 
+}
+
+type gridGraph [][]string
+
+// Problem 7. Island count
+// connectedComponent analogue
+func (g gridGraph) islandCount() int {
+
+	var result int
+	visited := make([][]bool, len(g))
+
+	for i, row := range g {
+		visited[i] = make([]bool, len(row))
+	}
+
+	for i, row := range g {
+		for j, _ := range row {
+			if !visited[i][j] && g[i][j] == "L" {
+				// new island found
+				result++
+				g.explore(i, j, visited)
+			}
+		}
+	}
+
+	return result
+}
+
+func (g gridGraph) explore(i, j int, visited [][]bool) bool {
+
+	if 0 > i || i >= len(g) ||
+		0 > j || j >= len(g[0]) {
+		return false
+	}
+
+	if g[i][j] == "W" {
+		return false
+	}
+
+	if visited[i][j] {
+		return false
+	}
+
+	visited[i][j] = true
+
+	g.explore(i+1, j, visited)
+	g.explore(i-1, j, visited)
+	g.explore(i, j+1, visited)
+	g.explore(i, j-1, visited)
+	return true
+}
+
+func Test_landCount(t *testing.T) {
+
+	testGrid := gridGraph{
+		{"W", "L", "W", "W", "W"},
+		{"W", "L", "W", "W", "W"},
+		{"W", "W", "W", "L", "W"},
+		{"W", "W", "L", "L", "W"},
+		{"L", "W", "W", "L", "L"},
+		{"L", "L", "W", "W", "W"},
+	}
+	assert.Equal(t, 3, testGrid.islandCount())
+
+	test2 := gridGraph{
+		{"L", "W", "W", "L", "W"},
+		{"L", "W", "W", "L", "L"},
+		{"W", "L", "W", "L", "W"},
+		{"W", "W", "W", "W", "W"},
+		{"W", "W", "L", "L", "L"},
+	}
+	assert.Equal(t, 4, test2.islandCount())
+
+	test3 := gridGraph{
+		{"L", "L", "L"},
+		{"L", "L", "L"},
+		{"L", "L", "L"},
+	}
+	assert.Equal(t, 1, test3.islandCount())
+
+	test4 := gridGraph{
+		{"W", "W"},
+		{"W", "W"},
+		{"W", "W"},
+	}
+	assert.Equal(t, 0, test4.islandCount())
+
+}
+
+// Problem 8. Minimum island
+func (g gridGraph) minimumIsland() int {
+
+	var result int = 1<<32 - 1
+	visited := make([][]bool, len(g))
+
+	for i, row := range g {
+		visited[i] = make([]bool, len(row))
+	}
+
+	for i, row := range g {
+		for j, _ := range row {
+			if !visited[i][j] && g[i][j] == "L" {
+				// new island found
+				result = min(result, g.exploreAndCount(i, j, visited))
+			}
+		}
+	}
+
+	return result
+}
+
+func (g gridGraph) exploreAndCount(i, j int, visited [][]bool) int {
+
+	if 0 > i || i >= len(g) ||
+		0 > j || j >= len(g[0]) {
+		return 0
+	}
+
+	if g[i][j] == "W" {
+		return 0
+	}
+
+	if visited[i][j] {
+		return 0
+	}
+
+	visited[i][j] = true
+
+	return 1 + g.exploreAndCount(i+1, j, visited) +
+		g.exploreAndCount(i-1, j, visited) +
+		g.exploreAndCount(i, j+1, visited) +
+		g.exploreAndCount(i, j-1, visited)
+
+}
+
+func Test_minimumIsland(t *testing.T) {
+	// I love when it works on the first run
+
+	testGrid := gridGraph{
+		{"W", "L", "W", "W", "W"},
+		{"W", "L", "W", "W", "W"},
+		{"W", "W", "W", "L", "W"},
+		{"W", "W", "L", "L", "W"},
+		{"L", "W", "W", "L", "L"},
+		{"L", "L", "W", "W", "W"},
+	}
+	assert.Equal(t, 2, testGrid.minimumIsland())
+
+	test2 := gridGraph{
+		{"L", "W", "W", "L", "W"},
+		{"L", "W", "W", "L", "L"},
+		{"W", "L", "W", "L", "W"},
+		{"W", "W", "W", "W", "W"},
+		{"W", "W", "L", "L", "L"},
+	}
+	assert.Equal(t, 1, test2.minimumIsland())
+
+	test3 := gridGraph{
+		{"L", "L", "L"},
+		{"L", "L", "L"},
+		{"L", "L", "L"},
+	}
+	assert.Equal(t, 9, test3.minimumIsland())
 }
