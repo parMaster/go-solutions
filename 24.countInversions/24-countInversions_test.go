@@ -23,6 +23,7 @@ func midway(from, to int) int {
 	return int((to-from)/2) + from
 }
 
+// classic merge sort, counting number of inversions(insertions)
 func mergeCount(arr []int32, from, mid, to int) int64 {
 	// merging left arr[from:mid] and right arr[mid+1:to]
 	var inversionsCount int64
@@ -51,14 +52,14 @@ func mergeCount(arr []int32, from, mid, to int) int64 {
 		tmpi++
 	}
 
-	// put everything left on the left side
+	// put everything remained on the left side
 	for i <= mid {
 		tmp[tmpi] = arr[i]
 		i++
 		tmpi++
 	}
 
-	// put everything left on the right size
+	// put everything remained on the right size
 	for j <= to {
 		tmp[tmpi] = arr[j]
 		j++
@@ -100,8 +101,8 @@ func Test_countInversions(t *testing.T) {
 	assert.Equal(t, int64(0), countInversionsNaive([]int32{1, 3, 5, 7}))
 	assert.Equal(t, int64(3), countInversionsNaive([]int32{3, 2, 1}))
 
-	// Learn to properly determine middle of the array
-	assert.Equal(t, 2, midway(0, 4)) // 5 elements array
+	// Learn to properly determine the middle of given array indices
+	assert.Equal(t, 2, midway(0, 4)) // id=2 is the middle of 5 elements array
 	assert.Equal(t, 0, midway(0, 1)) // 2 elements array
 	assert.Equal(t, 2, midway(0, 5)) // 6 elements
 
@@ -109,7 +110,7 @@ func Test_countInversions(t *testing.T) {
 	assert.Equal(t, int64(1), mergeCount([]int32{1, 2, 1, 2, 3}, 0, 1, 4))
 	assert.Equal(t, int64(2), mergeCount([]int32{1, 3, 1, 2, 3}, 0, 1, 4))
 
-	// subCount for small arrays
+	// subCount for small arrays (edge cases)
 	assert.Equal(t, int64(0), countInversions([]int32{1, 2}))
 	assert.Equal(t, int64(1), countInversions([]int32{2, 1}))
 
