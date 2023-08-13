@@ -12,13 +12,13 @@ func Test_Iter(t *testing.T) {
 	for _, v := range values {
 		// v := v // create a new 'v'.
 		go func() {
-			fmt.Println(v)
+			fmt.Println(v) // loop variable v captured by func literal
 			done <- true
 		}()
 	}
 
 	// wait for all goroutines to complete before exiting
-	for _ = range values {
+	for range values {
 		<-done
 	}
 }
