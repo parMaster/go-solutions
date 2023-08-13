@@ -126,6 +126,97 @@ func Test_forValues(t *testing.T) {
 // New slices package
 // The new slices package provides many common operations on slices, using generic functions that work with slices of any element type.
 
+// func BinarySearch(x S, target E) (int, bool)
+// func BinarySearchFunc(x S, target T, cmp func(E, T) int) (int, bool)
+// func Clip(s S) S
+// func Clone(s S) S
+// func Compact(s S) S
+// func CompactFunc(s S, eq func(E, E) bool) S
+// func Compare(s1, s2 S) int
+// func CompareFunc(s1 S1, s2 S2, cmp func(E1, E2) int) int
+// func Contains(s S, v E) bool
+// func ContainsFunc(s S, f func(E) bool) bool
+// func Delete(s S, i, j int) S
+// func DeleteFunc(s S, del func(E) bool) S
+// func Equal(s1, s2 S) bool
+// func EqualFunc(s1 S1, s2 S2, eq func(E1, E2) bool) bool
+// func Grow(s S, n int) S
+// func Index(s S, v E) int
+// func IndexFunc(s S, f func(E) bool) int
+// func Insert(s S, i int, v ...E) S
+// func IsSorted(x S) bool
+// func IsSortedFunc(x S, cmp func(a, b E) int) bool
+// func Max(x S) E
+// func MaxFunc(x S, cmp func(a, b E) int) E
+// func Min(x S) E
+// func MinFunc(x S, cmp func(a, b E) int) E
+// func Replace(s S, i, j int, v ...E) S
+// func Reverse(s S)
+// func Sort(x S)
+// func SortFunc(x S, cmp func(a, b E) int)
+// func SortStableFunc(x S, cmp func(a, b E) int)
+
+func Test_BinSearch(t *testing.T) {
+	s := []int{1, 2, 3, 4, 5, 6, 7, 8}
+	unsorted := []int{4, 3, 2, 1, 5, 8, 7, 6}
+
+	// IsSorted reports whether s is sorted.
+	assert.True(t, slices.IsSorted(s))
+	assert.True(t, slices.IsSortedFunc(s, func(a, b int) int { return a - b }))
+
+	// IsSorted reports whether s is sorted.
+	assert.False(t, slices.IsSorted(unsorted))
+	assert.False(t, slices.IsSortedFunc(unsorted, func(a, b int) int { return a - b }))
+
+	// BinarySearch returns the smallest index i such that x[i] >= target.
+	position, ok := slices.BinarySearch(s, 1)
+	assert.Equal(t, position, 0)
+	assert.Equal(t, ok, true)
+
+	a := []int{1, 2}
+	a = append(a, 3)
+	assert.Equal(t, a, []int{1, 2, 3})
+	assert.Equal(t, len(a), 3)
+	assert.Equal(t, cap(a), 4) // cap doubles when appending to a slice
+
+	// Clone returns a copy of s.
+	b := slices.Clone(a)
+	assert.Equal(t, b, []int{1, 2, 3})
+	assert.Equal(t, len(b), 3)
+	assert.Equal(t, cap(b), 3) // cap mutates to len when cloning a slice
+
+	// Clip removes unused capacity from the slice, returning s[:len(s):len(s)].
+	a = slices.Clip(a)
+	assert.Equal(t, a, []int{1, 2, 3})
+	assert.Equal(t, len(a), 3)
+	assert.Equal(t, cap(a), 3)
+
+	assert.Equal(t, a, []int{1, 2, 3})
+	assert.Equal(t, len(a), 3)
+	assert.Equal(t, cap(a), 3)
+
+	// Contains reports whether x is within s.
+	assert.True(t, slices.Contains(s, 1))
+
+	// Max returns the maximum element in s.
+	assert.Equal(t, slices.Max(s), 8)
+
+	// Reverse reverses the elements of s.
+	slices.Reverse(s)
+	assert.Equal(t, s, []int{8, 7, 6, 5, 4, 3, 2, 1})
+
+	// Sort sorts s.
+	slices.Sort(s)
+	assert.Equal(t, s, []int{1, 2, 3, 4, 5, 6, 7, 8})
+
+	// Compact returns a slice containing all elements in s that satisfy f.
+	// The order of elements is preserved.
+	bloated := []int{1, 1, 2, 2, 2, 2, 3, 4, 5, 6, 7, 8}
+	compacted := slices.Compact(bloated)
+	assert.Equal(t, compacted, []int{1, 2, 3, 4, 5, 6, 7, 8})
+
+}
+
 // New maps package
 // The new maps package provides several common operations on maps, using generic functions that work with maps of any key or element type.
 
