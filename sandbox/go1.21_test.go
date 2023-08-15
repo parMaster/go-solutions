@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"log"
 	"slices"
+	"strings"
 	"testing"
+
+	"maps"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -219,6 +222,43 @@ func Test_BinSearch(t *testing.T) {
 
 // New maps package
 // The new maps package provides several common operations on maps, using generic functions that work with maps of any key or element type.
+//
+// func Clone(m M) M
+// func Copy(dst M1, src M2)
+// func DeleteFunc(m M, del func(K, V) bool)
+// func Equal(m1 M1, m2 M2) bool
+// func EqualFunc(m1 M1, m2 M2, eq func(V1, V2) bool) bool
+func Test_Maps(t *testing.T) {
+
+	m := map[string]string{"a": "a", "b": "b", "c": "c"}
+
+	m1 := maps.Clone(m)
+
+	assert.Equal(t, m, m1)
+
+	m1["c"] = "ddd"
+
+	assert.NotEqual(t, m, m1)
+
+	maps.Copy(m1, m)
+
+	assert.Equal(t, m, m1)
+
+	maps.DeleteFunc(m1, func(k string, v string) bool { return k == "c" || v == "ddd" })
+
+	assert.Equal(t, map[string]string{"a": "a", "b": "b"}, m1)
+
+	m2 := maps.Clone(m)
+
+	assert.True(t, maps.Equal(m, m2))
+	assert.False(t, maps.Equal(m, m1))
+
+	for k, v := range m2 {
+		m2[k] = strings.ToUpper(v)
+	}
+
+	assert.True(t, maps.EqualFunc(m, m2, func(v string, v1 string) bool { return strings.ToLower(v) == strings.ToLower(v1) }))
+}
 
 // New cmp package
 // The new cmp package defines the type constraint Ordered and two new generic functions Less and Compare that are useful with ordered types.
