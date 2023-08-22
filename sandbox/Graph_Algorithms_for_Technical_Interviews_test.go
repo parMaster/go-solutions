@@ -521,7 +521,7 @@ func (g gridGraph) islandCount() int {
 	}
 
 	for i, row := range g {
-		for j, _ := range row {
+		for j := range row {
 			if !visited[i][j] && g[i][j] == "L" {
 				// new island found
 				result++
@@ -605,7 +605,7 @@ func (g gridGraph) minimumIsland() int {
 	}
 
 	for i, row := range g {
-		for j, _ := range row {
+		for j := range row {
 			if !visited[i][j] && g[i][j] == "L" {
 				// new island found
 				result = min(result, g.exploreAndCount(i, j, visited))
