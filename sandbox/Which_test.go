@@ -4,44 +4,45 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func which(arg string) (res string) {
+func which(args []string) (foundPaths []string) {
 	arguments := os.Args
-	if len(arguments) == 1 && arg == "" {
+	if len(arguments) == 1 && len(args) == 0 {
 		fmt.Println("Please provide an argument!")
 		return
 	}
-	file := arguments[1]
-	if arg != "" {
-		file = arg
+	if len(args) != 0 {
+		arguments = args
 	}
 
-	path := os.Getenv("PATH")
-	pathSplit := filepath.SplitList(path)
-	for _, directory := range pathSplit {
-		fullPath := filepath.Join(directory, file)
-		// Does it exist?
-		fileInfo, err := os.Stat(fullPath)
-		if err == nil {
-			mode := fileInfo.Mode()
-			// Is it a regular file?
-			if mode.IsRegular() {
-				// Is it executable?
-				if mode&0111 != 0 {
-					fmt.Println(fullPath)
-					return fullPath
+	for _, file := range arguments {
+		path := os.Getenv("PATH")
+		pathSplit := filepath.SplitList(path)
+		for _, directory := range pathSplit {
+			fullPath := filepath.Join(directory, file)
+			// Does it exist?
+			fileInfo, err := os.Stat(fullPath)
+			if err == nil {
+				mode := fileInfo.Mode()
+				// Is it a regular file?
+				if mode.IsRegular() {
+					// Is it executable?
+					if mode&0111 != 0 {
+						foundPaths = append(foundPaths, fullPath)
+					}
 				}
 			}
 		}
 	}
-	return
+	return slices.Compact(foundPaths)
 }
 
 func Test_which(t *testing.T) {
 
-	assert.Equal(t, which("go"), "/usr/local/go/bin/go")
+	assert.Equal(t, which([]string{"go"}), []string{"/usr/local/go/bin/go"})
 }
