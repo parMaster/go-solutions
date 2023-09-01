@@ -106,3 +106,71 @@ func Test_FuncOpts(t *testing.T) {
 
 	assert.Equal(t, 12, w.cnt)
 }
+
+// ===
+// === ChatGPTs best take on options
+
+// Config is the struct we want to initialize with various options
+type Config struct {
+	Option1 string
+	Option2 int
+	Option3 bool
+}
+
+// ConfigOption is a functional option type that modifies the Config struct
+type ConfigOption func(*Config)
+
+// WithOption1 sets the Option1 field of the Config struct
+func WithOption1(value string) ConfigOption {
+	return func(c *Config) {
+		c.Option1 = value
+	}
+}
+
+// WithOption2 sets the Option2 field of the Config struct
+func WithOption2(value int) ConfigOption {
+	return func(c *Config) {
+		c.Option2 = value
+	}
+}
+
+// WithOption3 sets the Option3 field of the Config struct
+func WithOption3(value bool) ConfigOption {
+	return func(c *Config) {
+		c.Option3 = value
+	}
+}
+
+// NewConfig initializes a Config instance with the provided options
+func NewConfig(options ...ConfigOption) *Config {
+	config := &Config{}
+
+	// Apply each option to the config
+	for _, option := range options {
+		option(config)
+	}
+
+	return config
+}
+
+func main() {
+	// Create a new Config instance with various options
+	config := NewConfig(
+		WithOption1("Value 1"),
+		WithOption2(42),
+		WithOption3(true),
+	)
+
+	// Print the configured values
+	fmt.Println("Option1:", config.Option1)
+	fmt.Println("Option2:", config.Option2)
+	fmt.Println("Option3:", config.Option3)
+}
+
+// In this example, we define a Config struct with three configurable options: Option1, Option2, and Option3.
+// We also define functional option types like WithOption1, WithOption2, and WithOption3 that modify the respective
+// fields in the Config struct. The NewConfig function takes a variadic number of these options and applies them
+// to create a new Config instance.
+
+// This approach allows you to create instances of the Config struct with different combinations of options,
+// making the code more readable and maintaining a clear separation of concerns.

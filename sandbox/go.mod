@@ -2,7 +2,10 @@ module sandbox
 
 go 1.21
 
-require github.com/stretchr/testify v1.8.4
+require (
+	github.com/go-pkgz/lgr v0.11.0
+	github.com/stretchr/testify v1.8.4
+)
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
