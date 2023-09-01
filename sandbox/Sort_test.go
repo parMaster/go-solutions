@@ -9,6 +9,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// Sane ways to sort a slice of structs:
+// 1. Implement sort.Interface and use sort.Sort
+// 2. Use sort.Slice
+// 3. Use slices.SortFunc
+
 // sort.Interface must be implemented by the type:
 type Interface interface {
 	// Len is the number of elements in the collection.
@@ -70,4 +75,30 @@ func Test_SortInterface(t *testing.T) {
 	copy(r1, r)
 	sort.Sort(sort.Reverse(r))
 	assert.Equal(t, r1, r) // r hasn't changed because already sorted descending
+}
+
+func Test_SortSlice(t *testing.T) {
+
+	r := NewRecords()
+
+	r = append(r, Record{Id: "1", MeetingId: "1", StartTime: time.Now().AddDate(0, 0, -1)})
+	r = append(r, Record{Id: "2", MeetingId: "1", StartTime: time.Now().AddDate(0, 0, -2)})
+	r = append(r, Record{Id: "3", MeetingId: "1", StartTime: time.Now().AddDate(0, 0, -3)})
+
+	log.Printf("Before Records: %v", r)
+
+	r1 := make(Records, len(r))
+	copy(r1, r)
+
+	sort.SliceStable(r, func(i, j int) bool {
+		return r[i].StartTime.Before(r[j].StartTime)
+	})
+
+	log.Printf("After Records: %v", r) // sorted by StartTime ascending
+
+	sort.SliceStable(r, func(i, j int) bool {
+		return r[i].StartTime.After(r[j].StartTime) // reverse sort
+	})
+
+	assert.Equal(t, r1, r) // r was sorted then reversed, so it's like the original
 }
