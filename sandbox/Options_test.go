@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"testing"
 
+	log "github.com/go-pkgz/lgr"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -174,3 +175,33 @@ func main() {
 
 // This approach allows you to create instances of the Config struct with different combinations of options,
 // making the code more readable and maintaining a clear separation of concerns.
+
+//
+
+//
+
+/// Once again
+
+type M struct {
+	config string
+}
+
+func (m *M) Report() {
+	log.Printf("m.config=%s", m.config)
+}
+
+type FOpt func(*M)
+
+func NewM(opts ...FOpt) *M {
+	m := M{}
+	for _, o := range opts {
+		o(&m)
+	}
+	return &m
+}
+
+func WithOpt1(opt string) FOpt {
+	return func(m *M) {
+		m.config = opt
+	}
+}
