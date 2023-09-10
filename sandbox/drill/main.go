@@ -1,102 +1,66 @@
-// Drilling Read file line by line and functiona options
-// smc.txt is from https://github.com/acidanthera/VirtualSMC/blob/master/Docs/SMCSensorKeys.txt
 package main
 
 import (
 	"bufio"
 	"fmt"
 	"os"
-	"slices"
 	"strings"
 )
 
-type Record string
-
-type fr struct {
-	data   map[string]Record
-	delim  byte
-	sorted bool
+type Parser struct {
+	delim byte
 }
 
-type Option func(*fr)
+type Option func(*Parser) error
 
-func NewFileReader(opts ...Option) *fr {
-	r := fr{}
+func NewParser(opts ...Option) *Parser {
 
-	r.data = make(map[string]Record)
+	p := Parser{}
 
 	for _, opt := range opts {
-		opt(&r)
+		opt(&p)
 	}
-	return &r
+
+	return &p
 }
 
-func WithDelim(d byte) Option {
-	return func(r *fr) {
-		r.delim = d
+func UseDelim(d byte) Option {
+	return func(p *Parser) error {
+		if string(d) == "" {
+			return fmt.Errorf("empty delimiter: %b", d)
+		}
+
+		p.delim = d
+		return nil
 	}
 }
 
-func Sorted() Option {
-	return func(r *fr) {
-		r.sorted = true
-	}
-}
+func (p *Parser) Parse(file string) error {
 
-func (r *fr) Read(path string) error {
-
-	f, err := os.Open(path)
+	f, err := os.Open(file)
 	if err != nil {
-		return err
+		return fmt.Errorf("Can't open '%s': %e", file, err)
 	}
-	defer f.Close()
 
-	fb := bufio.NewReader(f)
-
+	b := bufio.NewReader(f)
 	for {
-		line, err := fb.ReadString(r.delim)
-
+		line, err := b.ReadString(p.delim)
 		if err != nil {
 			break
 		}
 
-		fields := strings.Fields(string(line))
+		// fmt.Printf(line)
 
-		if len(fields) == 0 {
-			continue
-		}
-
-		r.data[fields[0][1:5]] = Record(strings.Join(fields[7:], " "))
+		fields := strings.Fields(line)
+		fmt.Printf("%s - %s \n", fields[0][1:5], strings.Join(fields[7:], " "))
 	}
 
 	return nil
 }
 
-func (r *fr) Display() {
-
-	keys := Keys(r.data)
-	if r.sorted {
-		slices.Sort(keys)
-	}
-
-	for _, k := range keys {
-		fmt.Printf("%s | %s \n", k, r.data[k])
-	}
-}
-
-func Keys[V any](m map[string]V) []string {
-	var keys []string
-	for k := range m {
-		keys = append(keys, k)
-	}
-	return keys
-}
-
 func main() {
 
-	r := NewFileReader(WithDelim('\n'), Sorted())
+	p := NewParser(UseDelim('\n'))
 
-	r.Read("smc.txt")
-
-	r.Display()
+	p.Parse("smc.txt")
 }
