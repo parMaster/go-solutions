@@ -58,9 +58,24 @@ func (p *Parser) Parse(file string) error {
 	return nil
 }
 
+// I call it "horisontal" approach, because I don't know the right word
+// Pretty much the same, but different
+func New() *Parser {
+	p := Parser{}
+	return &p
+}
+
+func (p *Parser) WithDelimiter(delim byte) *Parser {
+	p.delim = delim
+	return p
+}
+
 func main() {
 
+	// kind of "vertical" approach
 	p := NewParser(UseDelim('\n'))
-
 	p.Parse("smc.txt")
+
+	// "horisontal" approach
+	New().WithDelimiter('\n').Parse("smc.txt")
 }
