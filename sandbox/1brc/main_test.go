@@ -36,11 +36,43 @@ func TestCalc0(t *testing.T) {
 
 }
 
-func BenchmarkCalc0RAM(b *testing.B) {
+func BenchmarkCalc0(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		_, err := calc0("/mnt/ramdisk/10mil_c10000_l10000000.csv")
+		_, err := calc0("mil_c10000_l1000000.csv")
 		if err != nil {
 			b.Fatal(err)
 		}
 	}
+}
+func BenchmarkCalc1(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		_, err := calc1("mil_c10000_l1000000.csv")
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func floatStrToInt(s string) int {
+
+	if i, ok := floatMap[s]; ok {
+		return i
+	} else {
+		panic("floatStrToInt: " + s)
+	}
+}
+
+func TestFloatStrToInt(t *testing.T) {
+	initFloatMap()
+
+	require.Equal(t, 0, floatStrToInt("0.0"))
+	require.Equal(t, 69, floatStrToInt("6.9"))
+	require.Equal(t, 42, floatStrToInt("4.2"))
+	require.Equal(t, 420, floatStrToInt("42.0"))
+	require.Equal(t, 0, floatStrToInt("0.0"))
+	require.Equal(t, 0, floatStrToInt("-0.0"))
+	require.Equal(t, -69, floatStrToInt("-6.9"))
+	require.Equal(t, -42, floatStrToInt("-4.2"))
+	require.Equal(t, -420, floatStrToInt("-42.0"))
+
 }
