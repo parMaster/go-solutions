@@ -7,10 +7,12 @@ import (
 	"log"
 	"math/rand"
 	"os"
+	"runtime"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
+
+	"github.com/gammazero/workerpool"
 
 	"golang.org/x/exp/maps"
 )
@@ -30,26 +32,15 @@ func genWrite(locations, lines int, filename string) error {
 	return file.Close()
 }
 
-// readLines gives me a baseline result for IO speed
-func readLines(filename string) int {
-	file, err := os.Open(filename)
-	if err != nil {
-		return 0
-	}
-	defer file.Close()
-
-	i := 0
-	reader := bufio.NewReader(file)
-	for {
-		line, _, err := reader.ReadLine()
-		if err != nil {
-			return i
-		}
-		line = line[:len(line)-1]
-		i += len(line)
-	}
+// preliminary int results
+type loc struct {
+	mean int
+	min  int
+	max  int
+	n    int
 }
 
+// actual float results
 type location struct {
 	mean float64
 	min  float64
@@ -57,67 +48,7 @@ type location struct {
 	n    int
 }
 
-// calc0 is naive single-core solution of 1brc
-func calc0(filename string) (results map[string]location, err error) {
-
-	sums := make(map[string]location)
-
-	file, err := os.Open(filename)
-	if err != nil {
-		return sums, err
-	}
-	defer file.Close()
-
-	var city string
-	var temp float64
-
-	reader := bufio.NewReader(file)
-	for {
-		line, err := reader.ReadString('\n')
-		if err != nil {
-			break
-		}
-
-		el := strings.Split(line[:len(line)-1], ";")
-		city = el[0]
-		if len(el) != 2 {
-			log.Println(line[:len(line)-1])
-			log.Println("invalid line")
-			continue
-		}
-		temp, err = strconv.ParseFloat(el[1], 64) // definitely can be optimized since we know the format and range is always -99.9 - 99.9
-		if err != nil {
-			log.Println(line[:len(line)-1])
-			log.Println(err)
-			os.Exit(1)
-		}
-
-		if v, ok := sums[city]; !ok {
-			sums[city] = location{
-				mean: sums[city].mean + temp,
-				min:  temp,
-				max:  temp,
-				n:    sums[city].n + 1,
-			}
-		} else {
-			v.n++
-			v.mean += temp
-			v.min = min(v.min, temp)
-			v.max = max(v.max, temp)
-			sums[city] = v
-		}
-	}
-
-	for c, v := range sums {
-		v.mean = v.mean / float64(v.n)
-		sums[c] = v
-	}
-
-	return sums, nil
-}
-
-// Attempt to optimize calc0
-
+// dictionary for float strings to int
 var floatMap map[string]int
 
 // generates a map of float strings to int
@@ -129,31 +60,90 @@ func initFloatMap() {
 	floatMap["-0.0"] = 0
 }
 
-// calc1 is an attempt to optimize calc0. Still single-core.
-// 1/2 of the time of calc0
-func calc1(filename string) (results map[string]location, err error) {
+func formatResults(r map[string]location) string {
+	var sb strings.Builder
 
-	// warming up the map
+	cities := maps.Keys(r)
+	slices.Sort(cities)
+
+	for _, c := range cities {
+		sb.WriteString(fmt.Sprintf("%s=%.1f/%.1f/%.1f,", c, r[c].min, r[c].mean, r[c].max))
+	}
+	str := sb.String()
+	return "{" + str[:len(str)-1] + "}"
+}
+
+// Multi-core solution
+func solve(filename string, size int) (results map[string]location, err error) {
 	initFloatMap()
 
-	type loc struct {
-		mean int
-		min  int
-		max  int
-		n    int
+	cores := runtime.NumCPU()
+	wp := workerpool.New(cores)
+
+	// res is a channel for results from workers
+	res := make(chan map[string]loc, cores)
+	defer close(res)
+	// start workers
+	for i := range cores {
+		start, stop := i*size/cores, (i+1)*size/cores
+		wp.Submit(func() { calcM(filename, start, stop, res) })
 	}
 
+	// receiving results
+	sums := make(map[string]loc, 10000)
+	for a := 1; a <= cores; a++ {
+
+		// merging results
+		for city, data := range <-res {
+			if v, ok := sums[city]; !ok {
+				sums[city] = data
+			} else {
+				v.n += data.n
+				v.mean += v.mean
+				v.min = min(v.min, data.min)
+				v.max = max(v.max, data.max)
+				sums[city] = v
+			}
+		}
+	}
+
+	wp.StopWait()
+
+	// convert to float
+	total := 0
+	results = make(map[string]location, len(sums))
+	for c, v := range sums {
+		results[c] = location{
+			mean: float64(v.mean) / float64(v.n),
+			min:  float64(v.min) / 10,
+			max:  float64(v.max) / 10,
+			n:    v.n,
+		}
+		total += v.n
+	}
+
+	if total != size {
+		log.Println("invalid total", total, size)
+	}
+
+	return results, nil
+}
+
+func calcM(filename string, start, stop int, results chan<- map[string]loc) error {
+
+	fmt.Println("calcM for ", start, stop)
 	sums := make(map[string]loc, 10000)
 
 	file, err := os.Open(filename)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer file.Close()
 
 	var line []byte
 	var city string
 	var temp int
+	i := 0
 
 	reader := bufio.NewReader(file)
 	for {
@@ -161,6 +151,15 @@ func calc1(filename string) (results map[string]location, err error) {
 		if err == io.EOF {
 			break
 		}
+		if i < start {
+			i++
+			continue
+		}
+		if i >= stop {
+			break
+		}
+		i++
+
 		city = string(line[:slices.Index(line, ';')])
 		temp = floatMap[string(line[slices.Index(line, ';')+1:])]
 
@@ -180,72 +179,41 @@ func calc1(filename string) (results map[string]location, err error) {
 		}
 	}
 
-	// 0.001-0.003 seconds for 10mil
-	results = make(map[string]location, len(sums))
-	for c, v := range sums {
-		results[c] = location{
-			mean: float64(v.mean) / float64(v.n),
-			min:  float64(v.min) / 10,
-			max:  float64(v.max) / 10,
-			n:    v.n,
-		}
-	}
+	// fmt.Println("done with chunk")
+	results <- sums
 
-	return results, nil
-}
-
-func formatResults(r map[string]location) string {
-	var sb strings.Builder
-
-	cities := maps.Keys(r)
-	slices.Sort(cities)
-
-	for _, c := range cities {
-		sb.WriteString(fmt.Sprintf("%s=%.1f/%.1f/%.1f,", c, r[c].min, r[c].mean, r[c].max))
-	}
-	str := sb.String()
-	return "{" + str[:len(str)-1] + "}"
+	return nil
 }
 
 func main() {
-
 	// generate test data
 	// sudo mkdir /mnt/ramdisk
 	// sudo mount -t tmpfs -o rw,size=2G tmpfs /mnt/ramdisk
 	// genWrite(10000, 100000000, "/mnt/ramdisk/100mil") // 100 mil rows ~1.3GB on ramdisk, keeping SSD happy
 
-	start := time.Now()
-	var i int
-	for range 10 {
-		i += readLines("10mil_c10000_l10000000.csv")
+	// testing on 10 millin lines dataset
+	cities := 10000
+	lines := 10000000
+	// generatin 10 mil rows
+	if _, err := os.Stat("10mil_c10000_l10000000.csv"); os.IsNotExist(err) {
+		genWrite(cities, lines, "10mil")
 	}
-	fmt.Printf("100 mil lines read in %.1f seconds, i= %d\n", time.Since(start).Seconds(), i)
 
+	var start time.Time
 	var results map[string]location
 	var err error
 
+	// Multi-core solution
 	start = time.Now()
-	results, err = calc0("10mil_c10000_l10000000.csv")
+	results, err = solve("10mil_c10000_l10000000.csv", lines)
 	if err != nil {
 		log.Println(err)
 	}
-	if len(results) != 10000 {
-		log.Println("invalid results")
+	if len(results) != cities {
+		log.Printf("invalid results, expected %d, got %d\n", cities, len(results))
 	}
-	fmt.Printf("Calc0 done in %.1f seconds (would be %.1f seconds for 1B)\n", time.Since(start).Seconds(), time.Since(start).Seconds()*100)
-
-	start = time.Now()
-	results, err = calc1("10mil_c10000_l10000000.csv")
-	if err != nil {
-		log.Println(err)
-	}
-	if len(results) != 10000 {
-		log.Println("invalid results")
-	}
-	fmt.Printf("Calc1 done in %.1f seconds (would be %.1f seconds for 1B)\n", time.Since(start).Seconds(), time.Since(start).Seconds()*100)
-
-	start = time.Now()
 	formatted := formatResults(results)
-	fmt.Printf("Formatted in %.3f seconds, %d cities\n", time.Since(start).Seconds(), strings.Count(formatted, ",")+1)
-	// fmt.Println(formatted)
+	fmt.Printf("Done in %.1f seconds (would be %.1f seconds for 1B)\n", time.Since(start).Seconds(), time.Since(start).Seconds()*100)
+
+	os.WriteFile("results.txt", []byte(formatted), 0644)
 }
