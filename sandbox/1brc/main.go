@@ -35,7 +35,7 @@ func genWrite(locations, lines int, filename string) error {
 
 // preliminary int results
 type loc struct {
-	mean int
+	mean int64
 	min  int
 	max  int
 	n    int
@@ -47,18 +47,6 @@ type location struct {
 	min  float64
 	max  float64
 	n    int
-}
-
-// dictionary for float strings to int
-var floatMap map[string]int
-
-// generates a map of float strings to int
-func initFloatMap() {
-	floatMap = make(map[string]int, 1999)
-	for i := -999; i < 1000; i++ {
-		floatMap[fmt.Sprintf("%.1f\n", float64(i)/10)] = i
-	}
-	floatMap["-0.0\n"] = 0
 }
 
 func formatResults(r map[string]location) string {
@@ -86,7 +74,7 @@ func advancePos(pos int64, f *os.File) int64 {
 	return pos
 }
 
-// anvance interval margins
+// advance interval margins
 func advance(from, to int64, f *os.File) (int64, int64) {
 	from = advancePos(from, f)
 	to = advancePos(to, f)
@@ -117,12 +105,15 @@ func getIntervals(file string, cores int) (margins []interval, err error) {
 		margins = append(margins, interval{from, to})
 	}
 
+	// rounding error fix
+	margins[cores-1].to = size
+
 	return margins, nil
 }
 
-// Multi-core solution
+// solve divides the file into intervals and processes them in parallel
+// then merges int results and converts them to float and returns them
 func solve(filename string, size, cores int) (results map[string]location, err error) {
-	initFloatMap()
 
 	intervals, _ := getIntervals(filename, cores)
 
@@ -176,9 +167,10 @@ func solve(filename string, size, cores int) (results map[string]location, err e
 	return results, nil
 }
 
+// calcM reads a file from start to stop position and calculates int sum, min, max and n for each city
 func calcM(filename string, start, stop int64, results chan<- map[string]loc) error {
 
-	fmt.Println("calcM for interval ", start, stop)
+	fmt.Printf("processing interval %15d %15d\n", start, stop)
 	sums := make(map[string]loc, 10000)
 
 	file, err := os.Open(filename)
@@ -189,7 +181,7 @@ func calcM(filename string, start, stop int64, results chan<- map[string]loc) er
 
 	var line []byte
 	var city string
-	var temp int
+	var temp int64
 
 	r := bufio.NewReader(file)
 	file.Seek(start, 0)
@@ -204,20 +196,37 @@ func calcM(filename string, start, stop int64, results chan<- map[string]loc) er
 
 		semicol := slices.Index(line, ';')
 		city = string(line[:semicol])
-		temp = floatMap[string(line[semicol+1:])]
+
+		// convert []byte{float} to int
+		b := line[semicol+1:][:len(line[semicol+1:])-1]
+		negative := b[0] == '-'
+		if negative {
+			b = b[1:]
+		}
+		if len(b) == 4 {
+			// 12.3
+			temp = int64(b[0]-0x30)*100 + int64(b[1]-0x30)*10 + int64(b[3]-0x30)
+		} else if len(b) == 3 {
+			// 1.2
+			temp = int64(b[0]-0x30)*10 + int64(b[2]-0x30)
+		}
 
 		if v, ok := sums[city]; !ok {
 			sums[city] = loc{
 				mean: sums[city].mean + temp,
-				min:  temp,
-				max:  temp,
+				min:  int(temp),
+				max:  int(temp),
 				n:    sums[city].n + 1,
 			}
 		} else {
 			v.n++
-			v.mean += temp
-			v.min = min(v.min, temp)
-			v.max = max(v.max, temp)
+			if negative {
+				v.mean -= temp
+			} else {
+				v.mean += temp
+			}
+			v.min = min(v.min, int(temp))
+			v.max = max(v.max, int(temp))
 			sums[city] = v
 		}
 	}
@@ -248,19 +257,39 @@ func main() {
 			lines = l
 		}
 	}
+	input := ""
+	if slices.Index(args, "--input") != -1 {
+		input = args[slices.Index(args, "--input")+1]
+		fmt.Println("Using input file", input)
+		// count lines in input file
+		file, err := os.Open(input)
+		if err != nil {
+			log.Println(err)
+			os.Exit(1)
+		}
+		defer file.Close()
+		lines = 0
+		scanner := bufio.NewScanner(file)
+		for scanner.Scan() {
+			lines++
+		}
+	}
 
 	fmt.Println("Runnig", cores, "workers on", runtime.NumCPU(), "CPU cores")
 	fmt.Println("cities:", cities, "lines:", lines, "(", fmt.Sprintf("%.0f %c", float64(lines)/float64(1000000), 'M'), ")")
 
 	filename := fmt.Sprintf("input_c%d_l%d.csv", cities, lines)
+	if input != "" {
+		filename = input
+	}
 
 	// generate test data
 	// sudo mkdir /mnt/ramdisk
 	// sudo mount -t tmpfs -o rw,size=2G tmpfs /mnt/ramdisk
 	// genWrite(10000, 100000000, "/mnt/ramdisk/100mil") // 100 mil rows ~1.3GB on ramdisk, keeping SSD happy
 
-	// generatin 'lines' random lines of data
-	if _, err := os.Stat(filename); os.IsNotExist(err) {
+	// generating '--lines' random lines of data
+	if _, err := os.Stat(filename); os.IsNotExist(err) && input == "" {
 		genWrite(cities, lines, "input")
 	}
 
@@ -282,6 +311,6 @@ func main() {
 
 	if slices.Index(args, "--ro") == -1 {
 		os.WriteFile("results.txt", []byte(formatted), 0644)
-		fmt.Println("results written to results.txt")
+		fmt.Println("Results written to results.txt")
 	}
 }

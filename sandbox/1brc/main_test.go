@@ -59,6 +59,18 @@ func TestReadLines(t *testing.T) {
 	// 0.31s for 10 mils
 }
 
+// dictionary for float strings to int
+var floatMap map[string]int
+
+// generates a map of float strings to int
+func initFloatMap() {
+	floatMap = make(map[string]int, 2000)
+	for i := -999; i < 1000; i++ {
+		floatMap[fmt.Sprintf("%.1f\n", float64(i)/10)] = i
+	}
+	floatMap["-0.0\n"] = 0
+}
+
 func floatStrToInt(s string) int {
 	if i, ok := floatMap[s]; ok {
 		return i
@@ -69,13 +81,49 @@ func floatStrToInt(s string) int {
 
 func TestFloatStrToInt(t *testing.T) {
 	initFloatMap()
-
 	for range 100000 {
 		n := rand.Float64()*199.8 - 99.9
 		n = math.Round(n*10) / 10
 		require.Equal(t, int(n*10), floatStrToInt(fmt.Sprintf("%.1f\n", n)))
 	}
+}
 
+func parseFloat(b []byte) int {
+
+	neg := false
+	n := 0
+	b = b[:len(b)-1]
+	if b[0] == '-' {
+		neg = true
+		b = b[1:]
+	}
+	if len(b) == 4 {
+		// 12.3
+		n = int(b[0]-0x30)*100 + int(b[1]-0x30)*10 + int(b[3]-0x30)
+	} else if len(b) == 3 {
+		// 1.2
+		n = int(b[0]-0x30)*10 + int(b[2]-0x30)
+	}
+
+	if neg {
+		return -n
+	}
+	return n
+}
+
+func TestParseFloatNew(t *testing.T) {
+
+	require.Equal(t, 12, parseFloat([]byte("1.2\n")))
+	require.Equal(t, 123, parseFloat([]byte("12.3\n")))
+
+	require.Equal(t, -12, parseFloat([]byte("-1.2\n")))
+	require.Equal(t, -123, parseFloat([]byte("-12.3\n")))
+
+	for range 100000 {
+		n := rand.Float64()*199.8 - 99.9
+		n = math.Round(n*10) / 10
+		require.Equal(t, int(n*10), parseFloat([]byte(fmt.Sprintf("%.1f\n", n))))
+	}
 }
 
 // calc0 is naive single-core solution of 1brc
