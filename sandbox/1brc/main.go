@@ -56,9 +56,9 @@ var floatMap map[string]int
 func initFloatMap() {
 	floatMap = make(map[string]int, 1999)
 	for i := -999; i < 1000; i++ {
-		floatMap[fmt.Sprintf("%.1f", float64(i)/10)] = i
+		floatMap[fmt.Sprintf("%.1f\n", float64(i)/10)] = i
 	}
-	floatMap["-0.0"] = 0
+	floatMap["-0.0\n"] = 0
 }
 
 func formatResults(r map[string]location) string {
@@ -222,7 +222,6 @@ func calcM(filename string, start, stop int64, results chan<- map[string]loc) er
 		}
 	}
 
-	// fmt.Println("done with chunk")
 	results <- sums
 
 	return nil
@@ -232,7 +231,6 @@ func main() {
 
 	cores := runtime.NumCPU()
 	args := os.Args[1:]
-	fmt.Println(args)
 	if slices.Index(args, "--cores") != -1 {
 		if c, err := strconv.Atoi(args[slices.Index(args, "--cores")+1]); err == nil {
 			cores = c
@@ -251,7 +249,7 @@ func main() {
 		}
 	}
 
-	fmt.Println("Runnig", cores, "workers on", runtime.NumCPU(), "cores")
+	fmt.Println("Runnig", cores, "workers on", runtime.NumCPU(), "CPU cores")
 	fmt.Println("cities:", cities, "lines:", lines, "(", fmt.Sprintf("%.0f %c", float64(lines)/float64(1000000), 'M'), ")")
 
 	filename := fmt.Sprintf("input_c%d_l%d.csv", cities, lines)
@@ -282,7 +280,8 @@ func main() {
 	formatted := formatResults(results)
 	fmt.Printf("Done in %.1f seconds (would be %.1f seconds for 1B)\n", time.Since(start).Seconds(), time.Since(start).Seconds()*(1000000000/float64(lines)))
 
-	if slices.Index(args, "--ro") != -1 {
+	if slices.Index(args, "--ro") == -1 {
 		os.WriteFile("results.txt", []byte(formatted), 0644)
+		fmt.Println("results written to results.txt")
 	}
 }

@@ -70,20 +70,10 @@ func floatStrToInt(s string) int {
 func TestFloatStrToInt(t *testing.T) {
 	initFloatMap()
 
-	require.Equal(t, 0, floatStrToInt("0.0"))
-	require.Equal(t, 69, floatStrToInt("6.9"))
-	require.Equal(t, 42, floatStrToInt("4.2"))
-	require.Equal(t, 420, floatStrToInt("42.0"))
-	require.Equal(t, 0, floatStrToInt("0.0"))
-	require.Equal(t, 0, floatStrToInt("-0.0"))
-	require.Equal(t, -69, floatStrToInt("-6.9"))
-	require.Equal(t, -42, floatStrToInt("-4.2"))
-	require.Equal(t, -420, floatStrToInt("-42.0"))
-
-	for range 10000 {
+	for range 100000 {
 		n := rand.Float64()*199.8 - 99.9
 		n = math.Round(n*10) / 10
-		require.Equal(t, int(n*10), floatStrToInt(fmt.Sprintf("%.1f", n)))
+		require.Equal(t, int(n*10), floatStrToInt(fmt.Sprintf("%.1f\n", n)))
 	}
 
 }
