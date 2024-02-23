@@ -225,14 +225,14 @@ func calc1(filename string) (results map[string]location, err error) {
 
 		if v, ok := sums[city]; !ok {
 			sums[city] = loc{
-				mean: sums[city].mean + temp,
+				mean: sums[city].mean + int64(temp),
 				min:  temp,
 				max:  temp,
 				n:    sums[city].n + 1,
 			}
 		} else {
 			v.n++
-			v.mean += temp
+			v.mean += int64(temp)
 			v.min = min(v.min, temp)
 			v.max = max(v.max, temp)
 			sums[city] = v
