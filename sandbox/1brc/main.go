@@ -9,6 +9,7 @@ import (
 	"os"
 	"runtime"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -73,20 +74,66 @@ func formatResults(r map[string]location) string {
 	return "{" + str[:len(str)-1] + "}"
 }
 
+// advance position in the file past the next newline
+func advancePos(pos int64, f *os.File) int64 {
+	if pos == 0 {
+		return 0
+	}
+	f.Seek(pos, 0)
+	r := bufio.NewReader(f)
+	advance, _ := r.ReadBytes('\n')
+	pos += int64(len(advance))
+	return pos
+}
+
+// anvance interval margins
+func advance(from, to int64, f *os.File) (int64, int64) {
+	from = advancePos(from, f)
+	to = advancePos(to, f)
+	return from, to
+}
+
+type interval struct {
+	from int64
+	to   int64
+}
+
+// returns intervals to read from file, considering newlines
+func getIntervals(file string, cores int) (margins []interval, err error) {
+	f, err := os.Open(file)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	info, _ := f.Stat()
+	size := info.Size()
+	chunkSize := size / int64(cores)
+
+	for i := 0; i < cores; i++ {
+		from := chunkSize * int64(i)
+		to := chunkSize * int64(i+1)
+		from, to = advance(from, to, f)
+		margins = append(margins, interval{from, to})
+	}
+
+	return margins, nil
+}
+
 // Multi-core solution
-func solve(filename string, size int) (results map[string]location, err error) {
+func solve(filename string, size, cores int) (results map[string]location, err error) {
 	initFloatMap()
 
-	cores := runtime.NumCPU()
+	intervals, _ := getIntervals(filename, cores)
+
 	wp := workerpool.New(cores)
 
 	// res is a channel for results from workers
 	res := make(chan map[string]loc, cores)
 	defer close(res)
 	// start workers
-	for i := range cores {
-		start, stop := i*size/cores, (i+1)*size/cores
-		wp.Submit(func() { calcM(filename, start, stop, res) })
+	for _, interval := range intervals {
+		wp.Submit(func() { calcM(filename, interval.from, interval.to, res) })
 	}
 
 	// receiving results
@@ -129,9 +176,9 @@ func solve(filename string, size int) (results map[string]location, err error) {
 	return results, nil
 }
 
-func calcM(filename string, start, stop int, results chan<- map[string]loc) error {
+func calcM(filename string, start, stop int64, results chan<- map[string]loc) error {
 
-	fmt.Println("calcM for ", start, stop)
+	fmt.Println("calcM for interval ", start, stop)
 	sums := make(map[string]loc, 10000)
 
 	file, err := os.Open(filename)
@@ -143,25 +190,21 @@ func calcM(filename string, start, stop int, results chan<- map[string]loc) erro
 	var line []byte
 	var city string
 	var temp int
-	i := 0
 
-	reader := bufio.NewReader(file)
-	for {
-		line, _, err = reader.ReadLine()
+	r := bufio.NewReader(file)
+	file.Seek(start, 0)
+	i := start
+
+	for i < stop {
+		line, err = r.ReadBytes('\n')
+		i += int64(len(line))
 		if err == io.EOF {
 			break
 		}
-		if i < start {
-			i++
-			continue
-		}
-		if i >= stop {
-			break
-		}
-		i++
 
-		city = string(line[:slices.Index(line, ';')])
-		temp = floatMap[string(line[slices.Index(line, ';')+1:])]
+		semicol := slices.Index(line, ';')
+		city = string(line[:semicol])
+		temp = floatMap[string(line[semicol+1:])]
 
 		if v, ok := sums[city]; !ok {
 			sums[city] = loc{
@@ -186,17 +229,41 @@ func calcM(filename string, start, stop int, results chan<- map[string]loc) erro
 }
 
 func main() {
+
+	cores := runtime.NumCPU()
+	args := os.Args[1:]
+	fmt.Println(args)
+	if slices.Index(args, "--cores") != -1 {
+		if c, err := strconv.Atoi(args[slices.Index(args, "--cores")+1]); err == nil {
+			cores = c
+		}
+	}
+	cities := 10000
+	if slices.Index(args, "--cities") != -1 {
+		if c, err := strconv.Atoi(args[slices.Index(args, "--cities")+1]); err == nil {
+			cities = c
+		}
+	}
+	lines := 10000000
+	if slices.Index(args, "--lines") != -1 {
+		if l, err := strconv.Atoi(args[slices.Index(args, "--lines")+1]); err == nil {
+			lines = l
+		}
+	}
+
+	fmt.Println("Runnig", cores, "workers on", runtime.NumCPU(), "cores")
+	fmt.Println("cities:", cities, "lines:", lines, "(", fmt.Sprintf("%.0f %c", float64(lines)/float64(1000000), 'M'), ")")
+
+	filename := fmt.Sprintf("input_c%d_l%d.csv", cities, lines)
+
 	// generate test data
 	// sudo mkdir /mnt/ramdisk
 	// sudo mount -t tmpfs -o rw,size=2G tmpfs /mnt/ramdisk
 	// genWrite(10000, 100000000, "/mnt/ramdisk/100mil") // 100 mil rows ~1.3GB on ramdisk, keeping SSD happy
 
-	// testing on 10 millin lines dataset
-	cities := 10000
-	lines := 10000000
-	// generatin 10 mil rows
-	if _, err := os.Stat("10mil_c10000_l10000000.csv"); os.IsNotExist(err) {
-		genWrite(cities, lines, "10mil")
+	// generatin 'lines' random lines of data
+	if _, err := os.Stat(filename); os.IsNotExist(err) {
+		genWrite(cities, lines, "input")
 	}
 
 	var start time.Time
@@ -205,7 +272,7 @@ func main() {
 
 	// Multi-core solution
 	start = time.Now()
-	results, err = solve("10mil_c10000_l10000000.csv", lines)
+	results, err = solve(filename, lines, cores)
 	if err != nil {
 		log.Println(err)
 	}
@@ -213,7 +280,9 @@ func main() {
 		log.Printf("invalid results, expected %d, got %d\n", cities, len(results))
 	}
 	formatted := formatResults(results)
-	fmt.Printf("Done in %.1f seconds (would be %.1f seconds for 1B)\n", time.Since(start).Seconds(), time.Since(start).Seconds()*100)
+	fmt.Printf("Done in %.1f seconds (would be %.1f seconds for 1B)\n", time.Since(start).Seconds(), time.Since(start).Seconds()*(1000000000/float64(lines)))
 
-	os.WriteFile("results.txt", []byte(formatted), 0644)
+	if slices.Index(args, "--ro") != -1 {
+		os.WriteFile("results.txt", []byte(formatted), 0644)
+	}
 }

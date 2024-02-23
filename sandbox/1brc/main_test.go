@@ -17,8 +17,12 @@ import (
 )
 
 func Test_GenerateAndWrite(t *testing.T) {
-	require.NoError(t, genWrite(10, 10, "ten"))
-	require.NoError(t, genWrite(10000, 1000000, "mil"))
+	if _, err := os.Stat("input_c10_l10.csv"); os.IsNotExist(err) {
+		require.NoError(t, genWrite(10, 10, "input"))
+	}
+	if _, err := os.Stat("input_c10000_l1000000.csv"); os.IsNotExist(err) {
+		require.NoError(t, genWrite(10000, 1000000, "input"))
+	}
 }
 
 // readLines gives me a baseline result for IO speed
@@ -46,11 +50,11 @@ func readLines(filename string) int {
 
 // get a baseline for the time it takes to read the file
 func TestReadLines(t *testing.T) {
-	if _, err := os.Stat("10mil_c10000_l10000000.csv"); os.IsNotExist(err) {
-		genWrite(10000, 10000000, "10mil")
+	if _, err := os.Stat("input_c10000_l10000000.csv"); os.IsNotExist(err) {
+		genWrite(10000, 10000000, "input")
 	}
 
-	n := readLines("10mil_c10000_l10000000.csv")
+	n := readLines("input_c10000_l10000000.csv")
 	require.Equal(t, 10000000, n)
 	// 0.31s for 10 mils
 }
@@ -144,11 +148,11 @@ func calc0(filename string) (results map[string]location, err error) {
 }
 
 func TestCalc0(t *testing.T) {
-	if _, err := os.Stat("10mil_c10000_l10000000.csv"); os.IsNotExist(err) {
-		genWrite(10000, 10000000, "10mil")
+	if _, err := os.Stat("input_c10000_l10000000.csv"); os.IsNotExist(err) {
+		genWrite(10000, 10000000, "input")
 	}
 
-	results, err := calc0("10mil_c10000_l10000000.csv")
+	results, err := calc0("input_c10000_l10000000.csv")
 	require.NoError(t, err, "calc0")
 	require.Len(t, results, 10000)
 }
@@ -212,11 +216,108 @@ func calc1(filename string) (results map[string]location, err error) {
 }
 
 func TestCalc1(t *testing.T) {
-	if _, err := os.Stat("10mil_c10000_l10000000.csv"); os.IsNotExist(err) {
-		genWrite(10000, 10000000, "10mil")
+	if _, err := os.Stat("input_c10000_l10000000.csv"); os.IsNotExist(err) {
+		genWrite(10000, 10000000, "input")
 	}
 
-	results, err := calc1("10mil_c10000_l10000000.csv")
+	results, err := calc1("input_c10000_l10000000.csv")
 	require.NoError(t, err, "calc1")
 	require.Len(t, results, 10000)
+}
+
+// group by city and run the calculation in parallel??
+func readCities(filename string) (cities map[string][]int, err error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	cities = make(map[string][]int, 10000)
+
+	i := 0
+	reader := bufio.NewReader(file)
+	for {
+		line, _, err := reader.ReadLine()
+		if err != nil {
+			break
+		}
+
+		city := string(line[:slices.Index(line, ';')])
+		temp := floatMap[string(line[slices.Index(line, ';')+1:])]
+
+		if _, ok := cities[city]; !ok {
+			cities[city] = []int{temp}
+		} else {
+			cities[city] = append(cities[city], temp)
+		}
+
+		i++
+	}
+
+	if i != 10000000 {
+		panic("invalid number of lines")
+	}
+
+	return cities, nil
+}
+
+func TestReadCities(t *testing.T) {
+
+	initFloatMap()
+
+	cities, err := readCities("input_c10000_l10000000.csv")
+	// no good! appends killing the performance
+	require.NoError(t, err)
+	require.Len(t, cities, 10000)
+}
+
+// read the file in chunks the proper way so it's possible to calculate the results in parallel
+func readSection(file string, from, to int64) (lines []string, err error) {
+	f, err := os.Open(file)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	r := bufio.NewReader(f)
+
+	_, err = f.Seek(from, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	i := from
+	for i < to {
+		line, err := r.ReadBytes('\n')
+		if err != nil {
+			return lines, err
+		}
+		i += int64(len(line))
+		lines = append(lines, string(line))
+	}
+
+	return lines, nil
+}
+
+func TestReadSection(t *testing.T) {
+
+	file := "input_c10000_l1000000.csv"
+
+	// testing division into chunks, make sure we get all the lines independently of the number of chunks
+	for i := 1; i < 16; i++ {
+		cores := i
+		intervals, err := getIntervals(file, cores)
+		require.NoError(t, err)
+
+		fmt.Println(intervals)
+
+		lines := []string{}
+		for _, m := range intervals {
+			ll, err := readSection(file, m.from, m.to)
+			lines = append(lines, ll...)
+			require.NoError(t, err)
+		}
+		require.Len(t, lines, 1000000)
+	}
 }
