@@ -137,7 +137,7 @@ func solve(filename string, size, cores int) (results map[string]location, err e
 				sums[city] = data
 			} else {
 				v.n += data.n
-				v.mean += v.mean
+				v.mean += data.mean
 				v.min = min(v.min, data.min)
 				v.max = max(v.max, data.max)
 				sums[city] = v
@@ -211,20 +211,20 @@ func calcM(filename string, start, stop int64, results chan<- map[string]loc) er
 			temp = int64(b[0]-0x30)*10 + int64(b[2]-0x30)
 		}
 
+		if negative {
+			temp = -temp
+		}
+
 		if v, ok := sums[city]; !ok {
 			sums[city] = loc{
 				mean: sums[city].mean + temp,
 				min:  int(temp),
 				max:  int(temp),
-				n:    sums[city].n + 1,
+				n:    1,
 			}
 		} else {
 			v.n++
-			if negative {
-				v.mean -= temp
-			} else {
-				v.mean += temp
-			}
+			v.mean += temp
 			v.min = min(v.min, int(temp))
 			v.max = max(v.max, int(temp))
 			sums[city] = v
