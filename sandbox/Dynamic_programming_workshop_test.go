@@ -28,7 +28,7 @@ func Test_Fib_recursion(t *testing.T) {
 	assert.Equal(t, 3, FibR(1, 2, 3, 4))
 }
 
-//  Traditional Fib O(2^N)
+// Traditional Fib O(2^N)
 func Fib(n int) int {
 	if n <= 2 {
 		return 1
@@ -53,6 +53,32 @@ func Test_TraditionalFib(t *testing.T) {
 	//assert.Equal(t, Fib(50), 12586269025) // timeout
 
 	assert.Equal(t, 12586269025, FibR(1, 1, 2, 50))
+}
+
+// Tribonacci
+func Trib(n int) int {
+	switch n {
+	case 1:
+		return 0
+	case 2:
+		return 0
+	case 3:
+		return 1
+	}
+	return Trib(n-1) + Trib(n-2) + Trib(n-3)
+}
+
+func Test_Tribonacci(t *testing.T) {
+	assert.Equal(t, 0, Trib(1))
+	assert.Equal(t, 0, Trib(2))
+	assert.Equal(t, 1, Trib(3))
+	assert.Equal(t, 1, Trib(4))
+	assert.Equal(t, 2, Trib(5))
+	assert.Equal(t, 4, Trib(6))
+	assert.Equal(t, 7, Trib(7))
+	assert.Equal(t, 13, Trib(8))
+	assert.Equal(t, 24, Trib(9))
+	assert.Equal(t, 44, Trib(10))
 }
 
 // Memoized Fib
@@ -746,30 +772,29 @@ func Test_GridTravellerTabulized(t *testing.T) {
 	- fill further positions based on the current position
 */
 
-/** Problem Xi - canSum tabulation
- canSum(7, [5,3,4]) -> true
+/*
+  - Problem Xi - canSum tabulation
+    canSum(7, [5,3,4]) -> true
 
-	initializing table of size 7+1
-	[F, F, F, F, F, F, F, F]
+    initializing table of size 7+1
+    [F, F, F, F, F, F, F, F]
 
-	seed a basic solution canSub(0) always == true
-	[T, F, F, F, F, F, F, F]
+    seed a basic solution canSub(0) always == true
+    [T, F, F, F, F, F, F, F]
 
-	iteration from 0 to target, look ahead at every Element array index and mark it True
-	 0  1  2  3  4  5  6  7
-	[T, F, F, T, T, T, F, F]
+    iteration from 0 to target, look ahead at every Element array index and mark it True
+    0  1  2  3  4  5  6  7
+    [T, F, F, T, T, T, F, F]
 
-	Then we'll skip 1 and 2 because it's already false branches, and finally:
-	after we chacked the bounds
-	[T, F, F, T, T, T, T, T]
+    Then we'll skip 1 and 2 because it's already false branches, and finally:
+    after we chacked the bounds
+    [T, F, F, T, T, T, T, T]
 
-	m[7] is the result
+    m[7] is the result
 
-
-
-	Tabulized solution
- O(M*N) time complexity
- O(M) space somplexity
+    Tabulized solution
+    O(M*N) time complexity
+    O(M) space somplexity
 */
 func canSumTabulized(target int, elements []int) bool {
 
@@ -814,13 +839,13 @@ func Test_canSumTab(t *testing.T) {
 
 }
 
-/** Problem XII - howSum tabulation
+/*
+* Problem XII - howSum tabulation
 
 howSum(7, [5,3,4]) -> [4,3]
 
 so, return an array
 seed value: howSum(0, [...]) is always an empty array
-
 */
 func howSumTabulized(target int, elements []int) []int {
 
@@ -871,8 +896,7 @@ func Test_howSumTabulized(t *testing.T) {
 }
 
 /*
-	Problem XIII - bestSum(target, elements{}) tabulation
-
+Problem XIII - bestSum(target, elements{}) tabulation
 */
 func bestSumTabulized(target int, elements []int) []int {
 
@@ -925,8 +949,8 @@ func Test_bestSumTabulized(t *testing.T) {
 }
 
 /*
-	Problem IX - tabulating canConstruct
-	canConstruct(abcdef, {ab, abc, cd, def, abcd}) -> true
+Problem IX - tabulating canConstruct
+canConstruct(abcdef, {ab, abc, cd, def, abcd}) -> true
 */
 func canConstructTabulized(target string, elements []string) bool {
 
@@ -985,8 +1009,8 @@ func Test_canConstructTabulized(t *testing.T) {
 }
 
 /*
-	Problem X - countConstruct Tabulation
-	countConstruct( purple , { purp, p, ur, le, purpl }) -> 2
+Problem X - countConstruct Tabulation
+countConstruct( purple , { purp, p, ur, le, purpl }) -> 2
 */
 func countConstructTab(target string, elements []string) int {
 
@@ -1049,16 +1073,18 @@ func Test_countConstructTab(t *testing.T) {
 }
 
 /*
-	Problem XII - allConstruct Tabulation
+Problem XII - allConstruct Tabulation
 
-	allConstruct("abcdef", []string{"ab", "abc", "cd", "def", "abcd")
-	Should return:
-	[
-		[ab, cd, ef]
-		[ab, c, def]
-		[abc, def]
-		[abcd, ef]
-	]
+allConstruct("abcdef", []string{"ab", "abc", "cd", "def", "abcd")
+Should return:
+[
+
+	[ab, cd, ef]
+	[ab, c, def]
+	[abc, def]
+	[abcd, ef]
+
+]
 */
 func allConstructTab(target string, elements []string) [][]string {
 
