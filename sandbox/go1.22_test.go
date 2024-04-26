@@ -258,7 +258,9 @@ func Test_Maps(t *testing.T) {
 		m2[k] = strings.ToUpper(v)
 	}
 
-	assert.True(t, maps.EqualFunc(m, m2, func(v string, v1 string) bool { return strings.ToLower(v) == strings.ToLower(v1) }))
+	// assert.True(t, maps.EqualFunc(m, m2, func(v string, v1 string) bool { return strings.ToLower(v) == strings.ToLower(v1) }))
+	// use EqualFold instead!!
+	assert.True(t, maps.EqualFunc(m, m2, func(v string, v1 string) bool { return strings.EqualFold(v, v1) }))
 }
 
 // New cmp package
