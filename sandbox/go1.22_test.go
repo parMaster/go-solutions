@@ -1,6 +1,7 @@
 package sandbox
 
 import (
+	"cmp"
 	"fmt"
 	"log"
 	"slices"
@@ -261,4 +262,54 @@ func Test_Maps(t *testing.T) {
 }
 
 // New cmp package
-// The new cmp package defines the type constraint Ordered and two new generic functions Less and Compare that are useful with ordered types.
+// The new cmp package defines the type constraint Ordered
+// and two new generic functions Less and Compare that are useful with ordered types.
+
+func Test_Cmp(t *testing.T) {
+	// func Compare[T Ordered](x, y T) int
+	// Compare returns
+	// -1 if x is less than y,
+	//  0 if x equals y,
+	// +1 if x is greater than y.
+
+	assert.Equal(t, -1, cmp.Compare(1, 2))
+	assert.Equal(t, 0, cmp.Compare(1, 1))
+	assert.Equal(t, 1, cmp.Compare(2, 1))
+
+	assert.Equal(t, -1, cmp.Compare("abc", "bcd"))
+	assert.Equal(t, 0, cmp.Compare("aaa", "aaa"))
+	assert.Equal(t, 1, cmp.Compare("bbb", "aaa"))
+
+	// func Less[T Ordered](x, y T) bool
+	// Less reports whether x is less than y. For floating-point types,
+	// a NaN is considered less than any non-NaN, and -0.0 is not less than (is equal to) 0.0.
+
+	assert.True(t, cmp.Less("aaa", "bbb"))
+	assert.False(t, cmp.Less("bbb", "aaa"))
+
+	// func Or[T comparable](vals ...T) T
+	// Or returns the first of its arguments that is not equal to the zero value.
+	// If no argument is non-zero, it returns the zero value.
+
+	assert.Equal(t, "aaa", cmp.Or("", "aaa", "bbb"))
+	assert.Equal(t, "bbb", cmp.Or("", "bbb", "aaa"))
+
+	// slices?
+	// assert.Equal(t, []string{"a"}, cmp.Or([]string{}, []string{"a"}))
+	// NO :(
+
+	assert.Equal(t, 1, cmp.Or(0, 1, 2))
+
+	type c struct {
+		a string
+		b int
+	}
+
+	// Structs?
+	empty := c{}
+	a := c{a: "aaa", b: 1}
+	b := c{a: "bbb", b: 1}
+
+	assert.Equal(t, a, cmp.Or(empty, a, b))
+	// YES!
+}
