@@ -688,7 +688,7 @@ func AllConstruct(target string, wordBank []string) (result [][]string) {
 	return
 }
 
-func Test_AC(t *testing.T) {
+func Test_AllConstruct(t *testing.T) {
 	assert.EqualValues(t, [][]string{{"abc", "def"}}, AllConstruct("abcdef", []string{"ab", "abc", "cd", "def", "abcd"}))
 	assert.EqualValues(t, [][]string{{"abc", "def"}, {"abcd", "ef"}, {"ab", "cd", "ef"}}, AllConstruct("abcdef", []string{"ab", "abc", "cd", "def", "ef", "abcd"}))
 	assert.EqualValues(t, [][]string{{"abcd", "ef"}, {"ab", "c", "def"}, {"ab", "cd", "ef"}}, AllConstruct("abcdef", []string{"ab", "c", "cd", "def", "ef", "abcd"}))
