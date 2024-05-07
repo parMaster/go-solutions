@@ -697,6 +697,72 @@ func Test_AllConstruct(t *testing.T) {
 	assert.EqualValues(t, [][]string{}, AllConstruct("eeeeeeeeeeeeeeeeeeeeeeeeet", []string{"e", "ee", "eee", "eeee"}))
 }
 
+// Recursive AllConstruct solution
+func AllConstructRec(target string, wordBank []string, current []string) (result [][]string) {
+	result = make([][]string, 0)
+	if target == "" {
+		return [][]string{current}
+	}
+
+	for _, v := range wordBank {
+		if strings.HasPrefix(target, v) {
+
+			newTarget := strings.Replace(target, v, "", 1)
+
+			newCurrent := []string{}
+			newCurrent = append(newCurrent, current...)
+
+			newCurrent = append(newCurrent, v)
+
+			res := AllConstructRec(newTarget, wordBank, newCurrent)
+			result = append(result, res...)
+		}
+	}
+
+	return
+}
+
+func Test_AllConstructRec(t *testing.T) {
+	assert.EqualValues(t, [][]string{{"abc", "def"}}, AllConstructRec("abcdef", []string{"ab", "abc", "cd", "def", "abcd"}, []string{}))
+	assert.EqualValues(t, [][]string{{"ab", "cd", "ef"}, {"abc", "def"}, {"abcd", "ef"}}, AllConstructRec("abcdef", []string{"ab", "abc", "cd", "def", "ef", "abcd"}, []string{}))
+	assert.EqualValues(t, [][]string{}, AllConstructRec("eeeeeeeeeeeeeeeeeeeeeet", []string{"e", "ee", "eee", "eeee"}, []string{}))
+}
+
+// Memoized recursive AllConstruct solution
+func AllConstructRecMemoized(target string, wordBank []string, memo map[string][][]string) (result [][]string) {
+	elem, ok := memo[target]
+	if ok {
+		return elem
+	}
+
+	result = make([][]string, 0)
+	if target == "" {
+		return [][]string{{}}
+	}
+
+	for _, v := range wordBank {
+		if strings.HasPrefix(target, v) {
+
+			newTarget := strings.Replace(target, v, "", 1)
+
+			res := AllConstructRecMemoized(newTarget, wordBank, memo)
+			for _, r := range res {
+				r = append(r, v)
+				result = append(result, r)
+			}
+		}
+	}
+
+	memo[target] = result
+	return
+}
+
+func Test_AllConstructRecMemoized(t *testing.T) {
+	assert.EqualValues(t, [][]string{{"def", "abc"}}, AllConstructRecMemoized("abcdef", []string{"ab", "abc", "cd", "def", "abcd"}, map[string][][]string{}))
+	assert.EqualValues(t, [][]string{}, AllConstructRecMemoized("eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeet", []string{"e", "ee", "eee", "eeee"}, map[string][][]string{}))
+	assert.EqualValues(t, [][]string{{"ef", "cd", "ab"}, {"def", "abc"}, {"ef", "abcd"}}, AllConstructRecMemoized("abcdef", []string{"ab", "abc", "cd", "def", "ef", "abcd"}, map[string][][]string{}))
+}
+
 // Problem IX
 // Fib Tabulation
 // Building a table iteratively
