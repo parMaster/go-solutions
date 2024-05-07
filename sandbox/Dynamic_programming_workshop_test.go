@@ -644,7 +644,7 @@ func Test_countConstruct(t *testing.T) {
 // Problem VIII
 // allConstruct (target, wordBank)
 // same, but returns 2D array with all answers
-// i.e. 	allConstruct("abcdef", []string{"ab", "abc", "cd", "def", "abcd")
+// i.e. 	allConstruct("abcdef", []string{"ab", "c", "cd", "def", "ef", "abcd")
 // Should return:
 // ab, cd, ef
 // ab, c, def
@@ -652,52 +652,49 @@ func Test_countConstruct(t *testing.T) {
 // abcd, ef
 // 4 in total, as countConstruct counted before
 
-// Can't crack this one yet ((
-func allConstruct(target string, wordBank []string, memo map[string][][]string) [][]string {
-	elem, ok := memo[target]
-	if ok {
-		return elem
-	}
+type QItem struct {
+	target string
+	found  []string
+}
 
-	if len(target) == 0 {
-		return [][]string{{}}
-	}
+func AllConstruct(target string, wordBank []string) (result [][]string) {
 
-	currentAllConstruct := [][]string{}
-	for _, v := range wordBank {
-		if strings.HasPrefix(target, v) {
-			// newTarget := strings.Replace(target, v, "", 1)
-			//			memo[newTarget] = allConstruct(newTarget, wordBank, memo)
-			//			currentAllConstruct = append(currentAllConstruct, memo[newTarget])
+	result = make([][]string, 0)
+	var queue = []QItem{{target: target, found: []string{}}}
+
+	proceed := true
+	for proceed {
+		proceed = false
+		newQueue := []QItem{}
+		for _, qi := range queue {
+			if qi.target == "" {
+				result = append(result, qi.found)
+				continue
+			}
+			for _, v := range wordBank {
+				if strings.HasPrefix(qi.target, v) {
+					newQueue = append(newQueue, QItem{target: strings.Replace(qi.target, v, "", 1), found: append(qi.found, v)})
+					proceed = true
+				}
+			}
+		}
+
+		queue = make([]QItem, 0)
+		for _, qi := range newQueue {
+			queue = append(queue, QItem{target: qi.target, found: qi.found})
 		}
 	}
 
-	memo[target] = currentAllConstruct
-	return currentAllConstruct
-
+	return
 }
 
-func Test_allConstruct(t *testing.T) {
+func Test_AC(t *testing.T) {
+	assert.EqualValues(t, [][]string{{"abc", "def"}}, AllConstruct("abcdef", []string{"ab", "abc", "cd", "def", "abcd"}))
+	assert.EqualValues(t, [][]string{{"abc", "def"}, {"abcd", "ef"}, {"ab", "cd", "ef"}}, AllConstruct("abcdef", []string{"ab", "abc", "cd", "def", "ef", "abcd"}))
+	assert.EqualValues(t, [][]string{{"abcd", "ef"}, {"ab", "c", "def"}, {"ab", "cd", "ef"}}, AllConstruct("abcdef", []string{"ab", "c", "cd", "def", "ef", "abcd"}))
+	assert.EqualValues(t, [][]string{{"purp", "le"}, {"p", "ur", "p", "le"}}, AllConstruct("purple", []string{"purp", "p", "ur", "le", "purpl"}))
 
-	type Tests struct {
-		expected [][]string
-		s        string
-		elements []string
-	}
-
-	testPairs := []Tests{
-		{[][]string{{"ab", "cd", "ef"}, {"ab", "c", "def"}, {"abc", "def"}, {"abcd", "ef"}}, "abcdef", []string{"ab", "abc", "cd", "def", "abcd"}},
-	}
-
-	hardCase := Tests{
-		[][]string{}, "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeet", []string{"e", "ee", "eee", "eeee"},
-	}
-	testPairs = append(testPairs, hardCase)
-
-	for _, p := range testPairs {
-		memo := make(map[string][][]string)
-		assert.Equal(t, p.expected, allConstruct(p.s, p.elements, memo))
-	}
+	assert.EqualValues(t, [][]string{}, AllConstruct("eeeeeeeeeeeeeeeeeeeeeeeeet", []string{"e", "ee", "eee", "eeee"}))
 }
 
 // Problem IX
