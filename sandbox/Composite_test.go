@@ -77,3 +77,24 @@ func Test_Date2Manipulation(t *testing.T) {
 		time.Now().AddDate(1, 0, 0).Format("2006-01-02"))
 
 }
+
+// Type alias vs Composite type
+// also - type definition is not type alias
+
+// Type definition:
+type DateDef time.Time
+
+// Type alias:
+type DateAlias = time.Time
+
+// now can I use it as time.Time directly?
+func Test_DateAliasManipulation(t *testing.T) {
+	var d DateAlias = time.Now()
+
+	tomorrow := d.AddDate(1, 0, 0)
+
+	assert.Equal(t,
+		tomorrow.Format("2006-01-02"),
+		time.Now().AddDate(1, 0, 0).Format("2006-01-02"))
+	// Yes, I can use it as time.Time directly!
+}
