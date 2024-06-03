@@ -53,7 +53,16 @@ func Test_arrays(t *testing.T) {
 
 	a := [4]string{"Zero", "One", "Two", "Three"}
 	fmt.Println("a:", a)
+	//      0    1   2    3
 	// a: [Zero One Two Three]
+
+	// [Zero One]
+	fmt.Println(a[0:2])
+	// [Zero One]
+	fmt.Println(a[:2]) // [0:2) actually
+	// [Two Three]
+	fmt.Println(a[2:])
+
 	fmt.Printf("addr of a[0]: %p\n", &a[0])
 
 	var S0 = a[0:1]
