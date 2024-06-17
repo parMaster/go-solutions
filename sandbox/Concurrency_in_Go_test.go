@@ -1082,7 +1082,7 @@ func Test_FanIn(t *testing.T) {
 
 func Test_WithTimeout(t *testing.T) {
 
-	fLast := func(ctx context.Context) (string, error) {
+	fLongJob := func(ctx context.Context) (string, error) {
 		select {
 		case <-ctx.Done():
 			return "", ctx.Err()
@@ -1095,7 +1095,7 @@ func Test_WithTimeout(t *testing.T) {
 	f1Second := func(ctx context.Context) error {
 		ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 		defer cancel()
-		result, err := fLast(ctx)
+		result, err := fLongJob(ctx)
 		if err != nil {
 			return err
 		}
@@ -1106,7 +1106,7 @@ func Test_WithTimeout(t *testing.T) {
 	f1Minute := func(ctx context.Context) error {
 		ctx, cancel := context.WithTimeout(ctx, 1*time.Minute)
 		defer cancel()
-		result, err := fLast(ctx)
+		result, err := fLongJob(ctx)
 		if err != nil {
 			return err
 		}
@@ -1144,4 +1144,68 @@ func Test_WithTimeout(t *testing.T) {
 
 	wg.Wait()
 	log.Println("Done")
+}
+
+// tinkering with Cancel and Timeout contexts
+func Test_WithTimeout_Callstack(t *testing.T) {
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	top := func(ctx context.Context, to time.Duration, abruptCancel bool) error {
+		ctx, cancel := context.WithCancel(ctx) // another context
+		defer cancel()
+
+		err := func(ctx context.Context) error { // middle function
+			ctx, cancel := context.WithCancel(ctx) // and another context
+			defer cancel()
+
+			if abruptCancel {
+				cancel()
+			}
+
+			err := func(ctx context.Context) error { // last function on the call stack
+				ctx, cancel := context.WithTimeout(ctx, time.Second) // and yet another context
+				defer cancel()
+
+				select {
+				case <-ctx.Done():
+					return fmt.Errorf("error: %w\n", ctx.Err())
+					// case <-time.After(1 * time.Minute): // simulate long job
+				case <-time.After(to): // Will succeed - no timeout
+				}
+
+				fmt.Println("last function done")
+				return nil
+			}(ctx)
+			if err != nil {
+				return fmt.Errorf("last function error: %w\n", err)
+			}
+
+			fmt.Println("middle function done")
+			return nil
+		}(ctx)
+		if err != nil {
+			return fmt.Errorf("middle function error: %w\n", err)
+		}
+
+		fmt.Println("top function done")
+		return nil
+	}
+
+	err := top(ctx, 500*time.Millisecond, false) // timeout was not reached, no error
+	assert.NoError(t, err, "timeout should't be reached")
+
+	err = top(ctx, 1500*time.Millisecond, false) // timeout reached, error returned
+	if err != nil {
+		log.Printf("intended error: %v", err)
+	}
+	assert.Error(t, err, "timeout should definitely be reached")
+
+	err = top(ctx, 1500*time.Millisecond, true) // abrupt cancel in the middle of the callstack
+	if err != nil {
+		log.Printf("intended abrupt error: %v", err)
+	}
+	assert.Error(t, err, "abrupt context cancel should terminate everything")
+
 }
