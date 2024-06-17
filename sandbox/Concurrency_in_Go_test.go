@@ -6,11 +6,13 @@ package sandbox
 */
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"math"
 	"math/rand"
 	"net/http"
+	"runtime"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -517,7 +519,7 @@ func Test_Loop_Infinitely(t *testing.T) {
 		select {
 		case <-done:
 			log.Println("Done")
-			assert.Equal(t, 5, i)
+			assert.Equal(t, 5, i) // 5 times 200ms in 1 second
 			return
 		default:
 			// i++
@@ -584,7 +586,7 @@ func Test_Termination_Example(t *testing.T) {
 	fmt.Println("Done.")
 }
 
-// termination example with something reaaly being sent on strings chan
+// termination example with something really being sent on strings chan
 func Test_ProperTermination(t *testing.T) {
 	doWork := func(done <-chan any, strings <-chan string) <-chan any {
 		terminated := make(chan any)
@@ -657,6 +659,39 @@ func Test_BlockOnWrite(t *testing.T) {
 		fmt.Printf("%d: %d\n", i, <-randStream)
 	}
 	assert.False(t, routineReturned)
+}
+
+// Fixing previous example
+func Test_FixedBlockOnWrite(t *testing.T) {
+	routineReturned := false
+	newRandStream := func(done <-chan any) <-chan int {
+		randStream := make(chan int)
+		go func() {
+			defer fmt.Println("newRandStream closure exited.")
+			defer close(randStream)
+
+			for {
+				select {
+				case randStream <- rand.Int():
+				case <-done:
+					routineReturned = true
+					return
+				}
+			}
+		}()
+		return randStream
+	}
+	done := make(chan any)
+	defer close(done)
+	randStream := newRandStream(done)
+	fmt.Println("3 random ints:")
+	for i := 1; i <= 3; i++ {
+		fmt.Printf("%d: %d\n", i, <-randStream)
+	}
+	go func() {
+		<-done
+		assert.True(t, routineReturned)
+	}()
 }
 
 // Example:
@@ -803,8 +838,8 @@ func Test_strGenerator(t *testing.T) {
 	}
 }
 
-// I think I'm gonna start collecting these pipeline functions in Pipeline.go
-
+// I think I'm gonna start collecting these pipeline functions
+// in pipeline package (pipeline/main.go)
 func Generator[T any](done <-chan any, strSlice []T) <-chan T {
 	outChan := make(chan T)
 	go func() {
@@ -816,7 +851,6 @@ func Generator[T any](done <-chan any, strSlice []T) <-chan T {
 			case outChan <- s:
 			}
 		}
-
 	}()
 	return outChan
 }
@@ -876,7 +910,10 @@ func Test_genericFnGenerator(t *testing.T) {
 
 	done := make(chan any)
 	go func() {
-		time.Sleep(100 * time.Microsecond)
+		// time.Sleep(100 * time.Microsecond)
+		// close(done)
+		// or like this:
+		<-time.After(100 * time.Microsecond)
 		close(done)
 	}()
 
@@ -954,4 +991,157 @@ func Test_GeneratortoStage(t *testing.T) {
 		time.Sleep(100 * time.Millisecond)
 	}
 
+}
+
+// fan-in pattern - merge multiple channels into one
+var fanIn = func(done <-chan any, channels ...<-chan any) <-chan any {
+	var wg sync.WaitGroup
+	multiplexedStream := make(chan any)
+
+	multiplex := func(c <-chan any) {
+		defer wg.Done()
+
+		for val := range c {
+			select {
+			case <-done:
+				return
+			case multiplexedStream <- val:
+			}
+		}
+	}
+
+	wg.Add(len(channels))
+	for _, ch := range channels {
+		go multiplex(ch)
+	}
+
+	go func() {
+		wg.Wait()
+		close(multiplexedStream)
+	}()
+
+	return multiplexedStream
+}
+
+// some worker function that takes input channel and returns output channel
+func primeFinderMock(done <-chan any, input <-chan any) <-chan any {
+	outChan := make(chan any)
+	go func() {
+		defer close(outChan)
+		for {
+			select {
+			case <-done:
+				return
+			case outChan <- <-input:
+			}
+		}
+	}()
+	return outChan
+}
+
+// Using fan-in to merge slice of channels into a single channel
+func Test_FanIn(t *testing.T) {
+	done := make(chan any)
+	defer close(done)
+
+	start := time.Now()
+	rand := func() any { return rand.Intn(50000000) }
+	randIntStream := RepeatFn(done, rand)
+	numFinders := runtime.NumCPU()
+	fmt.Printf("Spinning up %d prime finders.\n", numFinders)
+	finders := make([]<-chan interface{}, numFinders)
+	fmt.Println("Not Primes:")
+	for i := 0; i < numFinders; i++ {
+		finders[i] = primeFinderMock(done, randIntStream)
+	}
+	var i int
+	for prime := range Take(done, fanIn(done, finders...), 10) {
+		i++
+		fmt.Printf("%d\t%d\n", i, prime)
+	}
+	fmt.Printf("Search took: %v\n", time.Since(start))
+}
+
+// I'll take a brake from the concurrency patterns for now
+// ... to be continued
+//
+//
+//
+//
+
+// CONTEXT
+
+// Context package serves two primary purposes:
+// - to provide an API for cancelling branches in our call-graph
+// - to provide a data-bag to transport request-scoped data through our call-graph
+
+// Cancellation:
+// - a goroutine's parent may want to cancel it
+// - a goroutime may want to cancel its children
+// - any blocking operation with a goroutine nedd to be preemptable so it may be cancelled
+
+func Test_WithTimeout(t *testing.T) {
+
+	fLast := func(ctx context.Context) (string, error) {
+		select {
+		case <-ctx.Done():
+			return "", ctx.Err()
+		case <-time.After(1 * time.Minute): // simulate long job
+			// case <-time.After(500 * time.Millisecond): // Will succeed - no timeout
+		}
+		return "result", nil
+	}
+
+	f1Second := func(ctx context.Context) error {
+		ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
+		defer cancel()
+		result, err := fLast(ctx)
+		if err != nil {
+			return err
+		}
+		log.Printf("f1Second received result: %s", result)
+		return nil
+	}
+
+	f1Minute := func(ctx context.Context) error {
+		ctx, cancel := context.WithTimeout(ctx, 1*time.Minute)
+		defer cancel()
+		result, err := fLast(ctx)
+		if err != nil {
+			return err
+		}
+		log.Printf("f1Minute received result: %s", result)
+		return nil
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		err := f1Second(ctx)
+		if err != nil {
+			log.Printf("error running f1Second: %v\n", err)
+			cancel()
+			return
+		}
+		log.Printf("f1Second success\n")
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		err := f1Minute(ctx)
+		if err != nil {
+			log.Printf("error running f1Minute: %v\n", err)
+			cancel()
+			return
+		}
+		log.Printf("f1Minute success\n")
+	}()
+
+	wg.Wait()
+	log.Println("Done")
 }
