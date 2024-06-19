@@ -12,7 +12,9 @@ import (
 	"math"
 	"math/rand"
 	"net/http"
+	"os"
 	"runtime"
+	"sort"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -20,6 +22,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/time/rate"
 )
 
 // Limit the number of goroutines that can run at the same time
@@ -1062,6 +1065,61 @@ func Test_FanIn(t *testing.T) {
 	fmt.Printf("Search took: %v\n", time.Since(start))
 }
 
+// TODO: take a closer look at these two:
+
+// ordone channel
+var orDone = func(done, c <-chan interface{}) <-chan interface{} {
+	valStream := make(chan interface{})
+	go func() {
+		defer close(valStream)
+		for {
+			select {
+			case <-done:
+				return
+			case v, ok := <-c:
+				if ok == false {
+					return
+				}
+				select {
+				case valStream <- v:
+				case <-done:
+				}
+			}
+		}
+	}()
+	return valStream
+}
+
+// bridge channel
+var bridge = func(
+	done <-chan interface{},
+	chanStream <-chan <-chan interface{},
+) <-chan interface{} {
+	valStream := make(chan interface{})
+	go func() {
+		defer close(valStream)
+		for {
+			var stream <-chan interface{}
+			select {
+			case maybeStream, ok := <-chanStream:
+				if ok == false {
+					return
+				}
+				stream = maybeStream
+			case <-done:
+				return
+			}
+			for val := range orDone(done, stream) {
+				select {
+				case valStream <- val:
+				case <-done:
+				}
+			}
+		}
+	}()
+	return valStream
+}
+
 // I'll take a brake from the concurrency patterns for now
 // ... to be continued
 //
@@ -1208,4 +1266,660 @@ func Test_WithTimeout_Callstack(t *testing.T) {
 	}
 	assert.Error(t, err, "abrupt context cancel should terminate everything")
 
+}
+
+// context.WithValue: just avoid using it, it's not worth it :/ It's:
+// - type unsafe
+// - complex heuristics to determine WHAT should be saved
+// - definitely DON'T use it to pass optional parameters!
+
+// CONCURRENCY AT SCALE
+//
+// Error propagation
+// Important to relay some critical information:
+// - what happened
+// - where and when it occured - call stack is helpful
+// - a friendly user-faced messaage
+// - how to get more information (stack trace, error id)
+// Categories of errors:
+// - bug
+// - known edge case
+//
+// Wrap the errors at each level with more context
+
+// Hearthbeats
+
+func doWork(done <-chan interface{}, pulseInterval time.Duration,
+) (<-chan interface{}, <-chan time.Time) {
+	heartbeat := make(chan interface{})
+	results := make(chan time.Time)
+	go func() {
+		defer close(heartbeat)
+		defer close(results)
+		pulse := time.Tick(pulseInterval)
+		workGen := time.Tick(2 * pulseInterval)
+		sendPulse := func() {
+			select {
+			case heartbeat <- struct{}{}:
+			default:
+			}
+		}
+		sendResult := func(r time.Time) {
+			for {
+				select {
+				case <-done:
+					return
+				case <-pulse:
+					sendPulse()
+				case results <- r:
+					return
+				}
+			}
+		}
+		for {
+			select {
+			case <-done:
+				return
+			case <-pulse:
+				sendPulse()
+			case r := <-workGen:
+				sendResult(r)
+			}
+		}
+	}()
+	return heartbeat, results
+}
+
+func Test_Hearthbeat(t *testing.T) {
+	done := make(chan interface{})
+	time.AfterFunc(10*time.Second, func() {
+		close(done)
+	})
+	const timeout = 2 * time.Second
+	heartbeat, results := doWork(done, timeout/2)
+	for {
+		select {
+		case _, ok := <-heartbeat:
+			if ok == false {
+				return
+			}
+			fmt.Println("pulse")
+		case r, ok := <-results:
+			if ok == false {
+				return
+			}
+			fmt.Printf("results %v\n", r.Second())
+		case <-time.After(timeout):
+			return
+		}
+	}
+}
+
+func doWorkFail(done <-chan interface{}, pulseInterval time.Duration,
+) (<-chan interface{}, <-chan time.Time) {
+	heartbeat := make(chan interface{})
+	results := make(chan time.Time)
+	go func() {
+		pulse := time.Tick(pulseInterval)
+		workGen := time.Tick(2 * pulseInterval)
+		sendPulse := func() {
+			select {
+			case heartbeat <- struct{}{}:
+			default:
+			}
+		}
+
+		sendResult := func(r time.Time) {
+			for {
+				select {
+				case <-pulse:
+					sendPulse()
+				case results <- r:
+					return
+				}
+			}
+		}
+		for i := 0; i < 2; i++ {
+			select {
+			case <-done:
+				return
+			case <-pulse:
+				sendPulse()
+			case r := <-workGen:
+				sendResult(r)
+			}
+		}
+	}()
+	return heartbeat, results
+}
+
+func Test_DoWorkFail(t *testing.T) {
+	done := make(chan interface{})
+	time.AfterFunc(10*time.Second, func() { close(done) })
+	const timeout = 2 * time.Second
+	heartbeat, results := doWorkFail(done, timeout/2)
+	for {
+		select {
+		case _, ok := <-heartbeat:
+			if ok == false {
+				return
+			}
+			fmt.Println("pulse")
+		case r, ok := <-results:
+			if ok == false {
+				return
+			}
+			fmt.Printf("results %v\n", r)
+		case <-time.After(timeout):
+			fmt.Println("worker goroutine is not healthy!")
+			return
+		}
+	}
+}
+
+// hearthbeat that happens at the beginning of a unit of work
+func Test_Hearthbeat_At_Beginning(t *testing.T) {
+	doWork := func(done <-chan interface{}) (<-chan interface{}, <-chan int) {
+		heartbeatStream := make(chan interface{}, 1)
+		workStream := make(chan int)
+		go func() {
+			defer close(heartbeatStream)
+			defer close(workStream)
+			for i := 0; i < 10; i++ {
+				select {
+				case heartbeatStream <- struct{}{}:
+				default:
+				}
+				select {
+				case <-done:
+					return
+				case workStream <- rand.Intn(10):
+				}
+			}
+		}()
+		return heartbeatStream, workStream
+	}
+	done := make(chan interface{})
+	defer close(done)
+	heartbeat, results := doWork(done)
+	for {
+		select {
+		case _, ok := <-heartbeat:
+			if ok {
+				fmt.Println("pulse")
+			} else {
+				return
+			}
+		case r, ok := <-results:
+			if ok {
+				fmt.Printf("results %v\n", r)
+			} else {
+				return
+			}
+		}
+	}
+}
+
+//
+
+func ProcessNumbers(
+	done <-chan interface{}, nums ...int) (<-chan interface{}, <-chan int) {
+	heartbeat := make(chan interface{}, 1)
+	intStream := make(chan int)
+	go func() {
+		defer close(heartbeat)
+		defer close(intStream)
+		time.Sleep(2 * time.Second) //simulate the delay before goroutine starts working
+		for _, n := range nums {
+			select {
+			case heartbeat <- struct{}{}:
+			default:
+			}
+			select {
+			case <-done:
+				return
+			case intStream <- n:
+			}
+		}
+	}()
+	return heartbeat, intStream
+}
+
+func TestDoWork_GeneratesAllNumbers(t *testing.T) {
+	done := make(chan interface{})
+	defer close(done)
+	intSlice := []int{0, 1, 2, 3, 5}
+	heartbeat, results := ProcessNumbers(done, intSlice...)
+	<-heartbeat
+	i := 0
+	for r := range results {
+		assert.Equal(t, intSlice[i], r)
+		i++
+	}
+}
+
+// Replicated requests
+// get result from a worker that finished first
+func Test_ReplicateResult(t *testing.T) {
+	doWork := func(
+		done <-chan interface{}, id int,
+		wg *sync.WaitGroup, result chan<- int,
+	) {
+		started := time.Now()
+		defer wg.Done()
+
+		// Simulate random load
+		simulatedLoadTime := time.Duration(1+rand.Intn(5)) * time.Second
+
+		select {
+		case <-done:
+		case <-time.After(simulatedLoadTime):
+		}
+		select {
+		case <-done:
+		case result <- id:
+		}
+		took := time.Since(started)
+		// Display how long handlers would have taken
+		if took < simulatedLoadTime {
+			took = simulatedLoadTime
+		}
+		fmt.Printf("%v took %v\n", id, took)
+	}
+
+	done := make(chan interface{})
+
+	result := make(chan int)
+	var wg sync.WaitGroup
+	wg.Add(10)
+	for i := 0; i < 10; i++ { // start 10 handlers to handle our requests.
+		go doWork(done, i, &wg, result)
+	}
+	firstReturned := <-result // grabs the first returned value from the group of handlers.
+	close(done)               // cancel all the remaining handlers.
+	// 							 This ensures they don’t continue to do unnecessary work.
+	wg.Wait()
+	fmt.Printf("Received an answer from #%v\n", firstReturned)
+}
+
+// Rate Limiting
+// token bucket algorithm
+// the bucket has a depth (capacity) of - d
+// the rate at which tokens replenished - r
+
+func Open() *APIConnection {
+	return &APIConnection{
+		rateLimiter: rate.NewLimiter(rate.Limit(1), 1), // 1 request per second
+	}
+}
+
+type APIConnection struct {
+	rateLimiter *rate.Limiter
+}
+
+func (a *APIConnection) ReadFile(ctx context.Context) error { // Pretend we do work here
+	if err := a.rateLimiter.Wait(ctx); err != nil {
+		return err
+	}
+	// Pretend we do work here
+	return nil
+}
+func (a *APIConnection) ResolveAddress(ctx context.Context) error { // Pretend we do work here
+	if err := a.rateLimiter.Wait(ctx); err != nil {
+		return err
+	}
+	// Pretend we do work here
+	return nil
+}
+
+func Test_RateLimiting1(t *testing.T) {
+	defer log.Printf("Done.")
+	log.SetOutput(os.Stdout)
+	log.SetFlags(log.Ltime | log.LUTC)
+	apiConnection := Open()
+	var wg sync.WaitGroup
+	wg.Add(20)
+	for i := 0; i < 10; i++ {
+		go func() {
+			defer wg.Done()
+			err := apiConnection.ReadFile(context.Background())
+			if err != nil {
+				log.Printf("cannot ReadFile: %v", err)
+			}
+			log.Printf("ReadFile")
+		}()
+	}
+	for i := 0; i < 10; i++ {
+		go func() {
+			defer wg.Done()
+			err := apiConnection.ResolveAddress(context.Background())
+			if err != nil {
+				log.Printf("cannot ResolveAddress: %v", err)
+			}
+			log.Printf("ResolveAddress")
+		}()
+	}
+	wg.Wait()
+}
+
+// Multilimiter
+
+type RateLimiter interface {
+	Wait(context.Context) error
+	Limit() rate.Limit
+}
+
+func MultiLimiter(limiters ...RateLimiter) *multiLimiter {
+	byLimit := func(i, j int) bool {
+		return limiters[i].Limit() < limiters[j].Limit()
+	}
+	sort.Slice(limiters, byLimit) // sort limiters by restriction ascending
+	return &multiLimiter{limiters: limiters}
+}
+
+type multiLimiter struct {
+	limiters []RateLimiter
+}
+
+func (l *multiLimiter) Wait(ctx context.Context) error {
+	for _, l := range l.limiters {
+		if err := l.Wait(ctx); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (l *multiLimiter) Limit() rate.Limit {
+	return l.limiters[0].Limit() // choose the most restrictive limiter
+}
+
+func Per(eventCount int, duration time.Duration) rate.Limit {
+	return rate.Every(duration / time.Duration(eventCount))
+}
+
+type APIConnectionMulti struct {
+	apiLimit RateLimiter
+}
+
+func (a *APIConnectionMulti) ReadFile(ctx context.Context) error {
+	if err := a.apiLimit.Wait(ctx); err != nil {
+		return err
+	}
+	// Pretend we do work here
+	return nil
+}
+func (a *APIConnectionMulti) ResolveAddress(ctx context.Context) error {
+	if err := a.apiLimit.Wait(ctx); err != nil {
+		return err
+	}
+	// Pretend we do work here
+	return nil
+}
+
+func OpenMulti() *APIConnectionMulti {
+	secondLimit := rate.NewLimiter(Per(2, time.Second), 1)   // limit per second with no burstiness
+	minuteLimit := rate.NewLimiter(Per(10, time.Minute), 10) // 10 per minute with burstiness of 10
+	return &APIConnectionMulti{
+		apiLimit: MultiLimiter(secondLimit, minuteLimit), // combine two limits
+	}
+}
+
+func Test_MultiRateLimiting(t *testing.T) {
+	defer log.Printf("Done.")
+	log.SetOutput(os.Stdout)
+	log.SetFlags(log.Ltime | log.LUTC)
+	apiConnection := OpenMulti()
+	var wg sync.WaitGroup
+	wg.Add(20)
+	for i := 0; i < 10; i++ {
+		go func() {
+			defer wg.Done()
+			err := apiConnection.ReadFile(context.Background())
+			if err != nil {
+				log.Printf("cannot ReadFile: %v", err)
+			}
+			log.Printf("ReadFile")
+		}()
+	}
+	for i := 0; i < 10; i++ {
+		go func() {
+			defer wg.Done()
+			err := apiConnection.ResolveAddress(context.Background())
+			if err != nil {
+				log.Printf("cannot ResolveAddress: %v", err)
+			}
+			log.Printf("ResolveAddress")
+		}()
+	}
+	wg.Wait()
+}
+
+// Limit multiple resources : disk, network, api
+
+type APIConnectionMultiResource struct {
+	apiLimit,
+	diskLimit,
+	networkLimit RateLimiter
+}
+
+func OpenMultiResource() *APIConnectionMultiResource {
+	return &APIConnectionMultiResource{
+		apiLimit: MultiLimiter(
+			rate.NewLimiter(Per(2, time.Second), 2),
+			rate.NewLimiter(Per(10, time.Minute), 10),
+		),
+		diskLimit: MultiLimiter(
+			rate.NewLimiter(rate.Limit(1), 1),
+		),
+		networkLimit: MultiLimiter(
+			rate.NewLimiter(Per(3, time.Second), 3),
+		)}
+}
+
+func (a *APIConnectionMultiResource) ReadFile(ctx context.Context) error {
+	err := MultiLimiter(a.apiLimit, a.diskLimit).Wait(ctx)
+	if err != nil {
+		return err
+	}
+	// Pretend we do work here
+	return nil
+}
+func (a *APIConnectionMultiResource) ResolveAddress(ctx context.Context) error {
+	err := MultiLimiter(a.apiLimit, a.networkLimit).Wait(ctx)
+	if err != nil {
+		return err
+	}
+	// Pretend we do work here
+	return nil
+}
+
+func Test_MultiResourceRateLimiting(t *testing.T) {
+	defer log.Printf("Done.")
+	log.SetOutput(os.Stdout)
+	log.SetFlags(log.Ltime | log.LUTC)
+	apiConnection := OpenMultiResource()
+	var wg sync.WaitGroup
+	wg.Add(20)
+	for i := 0; i < 10; i++ {
+		go func() {
+			defer wg.Done()
+			err := apiConnection.ReadFile(context.Background())
+			if err != nil {
+				log.Printf("cannot ReadFile: %v", err)
+			}
+			log.Printf("ReadFile")
+		}()
+	}
+	for i := 0; i < 10; i++ {
+		go func() {
+			defer wg.Done()
+			err := apiConnection.ResolveAddress(context.Background())
+			if err != nil {
+				log.Printf("cannot ResolveAddress: %v", err)
+			}
+			log.Printf("ResolveAddress")
+		}()
+	}
+	wg.Wait()
+}
+
+// rate.Limiter has a few other capabilities ...
+
+// TODO: not reaaly grasped what's going on here >>>
+
+// Healing Unhealthy Goroutines
+// steward - monitors a health of a goroutine and restarts it if it's unhealthy
+// ward - working gorouting that's monitored
+
+func or(channels ...<-chan interface{}) <-chan interface{} {
+	switch len(channels) {
+	case 0:
+		return nil
+	case 1:
+		return channels[0]
+	}
+	orDone := make(chan interface{})
+	go func() {
+		defer close(orDone)
+		select {
+		case <-channels[0]:
+		case <-channels[1]:
+		case <-or(append(channels[2:], orDone)...):
+		}
+	}()
+	return orDone
+}
+
+type startGoroutineFn func(done <-chan interface{}, pulseInterval time.Duration,
+) (heartbeat <-chan interface{})
+
+var newSteward = func(
+	timeout time.Duration,
+	startGoroutine startGoroutineFn,
+) startGoroutineFn {
+	return func(
+		done <-chan interface{},
+		pulseInterval time.Duration) <-chan interface{} {
+		heartbeat := make(chan interface{})
+		go func() {
+			defer close(heartbeat)
+			var wardDone chan interface{}
+			var wardHeartbeat <-chan interface{}
+			startWard := func() {
+				wardDone = make(chan interface{})
+				wardHeartbeat = startGoroutine(or(wardDone, done), timeout/2)
+			}
+			startWard()
+			pulse := time.Tick(pulseInterval)
+		monitorLoop:
+			for {
+				timeoutSignal := time.After(timeout)
+				for {
+					select {
+					case <-pulse:
+						select {
+						case heartbeat <- struct{}{}:
+						default:
+						}
+					case <-wardHeartbeat:
+						continue monitorLoop
+					case <-timeoutSignal:
+						log.Println("steward: ward unhealthy; restarting")
+						close(wardDone)
+						startWard()
+						continue monitorLoop
+					case <-done:
+						return
+					}
+				}
+			}
+		}()
+		return heartbeat
+	}
+}
+
+func Test_Steward_Simplistic_Ward(t *testing.T) {
+	// ward is really simplistic - takes no parameters and returns no arguments
+	doWork := func(done <-chan interface{}, _ time.Duration) <-chan interface{} {
+		log.Println("ward: Hello, I'm irresponsible!")
+		go func() {
+			<-done // not sending any pulses, not doing anything
+			log.Println("ward: I am halting.")
+		}()
+		return nil
+	}
+	doWorkWithSteward := newSteward(4*time.Second, doWork) // 4 sec timeout for doWork
+	done := make(chan interface{})
+	time.AfterFunc(9*time.Second, func() { // end the test after 9 seconds
+		log.Println("main: halting steward and ward.")
+		close(done)
+	})
+
+	for range doWorkWithSteward(done, 4*time.Second) { // start the steward
+		// range over the steward pulses
+	}
+	log.Println("Done")
+}
+
+// let's make some meaningful ward:
+var doWorkFn = func(
+	done <-chan interface{}, intList ...int,
+) (startGoroutineFn, <-chan interface{}) {
+	intChanStream := make(chan (<-chan interface{}))
+	intStream := bridge(done, intChanStream)
+	doWork := func(
+		done <-chan interface{},
+		pulseInterval time.Duration) <-chan interface{} {
+		intStream := make(chan interface{})
+		heartbeat := make(chan interface{})
+		go func() {
+			defer close(intStream)
+			select {
+			case intChanStream <- intStream:
+			case <-done:
+				return
+			}
+			pulse := time.Tick(pulseInterval)
+			for {
+			valueLoop:
+				for _, intVal := range intList {
+					if intVal < 0 {
+						log.Printf("negative value: %v\n", intVal)
+						return
+					}
+					for {
+						select {
+						case <-pulse:
+							select {
+							case heartbeat <- struct{}{}:
+							default:
+							}
+						case intStream <- intVal:
+							continue valueLoop
+						case <-done:
+							return
+						}
+					}
+				}
+			}
+		}()
+		return heartbeat
+	}
+	return doWork, intStream
+}
+
+func Test_Steward_Meaningful_Ward(t *testing.T) {
+	log.SetFlags(log.Ltime | log.LUTC)
+	log.SetOutput(os.Stdout)
+
+	done := make(chan interface{})
+	defer close(done)
+
+	doWork, intStream := doWorkFn(done, 1, 2, -1, 3, 4, 5)
+	doWorkWithSteward := newSteward(1*time.Second, doWork)
+	doWorkWithSteward(done, 1*time.Hour)
+
+	for intVal := range Take(done, intStream, 6) {
+		fmt.Printf("Received: %v\n", intVal)
+	}
 }
