@@ -53,39 +53,31 @@ func Test_CountingSemaphore(t *testing.T) {
 	assert.Equal(t, 4, int(time.Since(start).Seconds())) // 20/5 = 4
 }
 
-func Test_Channels(t *testing.T) {
-
-	wg := sync.WaitGroup{}
-	ch := make(chan int)
-
-	for i := range 4 {
-		wg.Add(1)
-		go func(i int) {
-			time.Sleep(1 * time.Second)
-			defer wg.Done()
-			ch <- i
-		}(i)
-	}
-
+/*
+When you close a channel in Go, you're signaling that no more values will be sent on that channel.
+However, any values that have already been sent on the channel before it was closed are still
+available to be received. This is true for both buffered and unbuffered channels.
+*/
+func Test_Send_Close_Read(t *testing.T) {
+	stream := make(chan any)
 	go func() {
-		wg.Wait()
-		close(ch)
+		stream <- "value"
+		close(stream)
 	}()
 
-	respCnt := 0
-	for response := range ch {
-		fmt.Println(response)
-		respCnt++
+	for {
+		val, ok := <-stream
+		if !ok {
+			break
+		}
+		fmt.Println(val)
 	}
 
-	assert.Equal(t, 4, respCnt)
 }
 
 // CONCURRENCY PRIMITIVES
 
 // sync package
-//
-
 func Test_SimulateWaitGroups(t *testing.T) {
 
 	var wg, cnt atomic.Int32
@@ -129,6 +121,7 @@ func Test_WaitGroups(t *testing.T) {
 	log.Println("Done")
 }
 
+// I don't really understand this one
 func Test_Cond(t *testing.T) {
 
 	condition := false
@@ -151,7 +144,6 @@ func Test_Cond(t *testing.T) {
 	c.L.Unlock()
 
 	assert.True(t, condition)
-	// I don't really understand this one
 }
 
 func Test_CondQueue(t *testing.T) {
@@ -177,7 +169,7 @@ func Test_CondQueue(t *testing.T) {
 	}
 }
 
-// sync.Once
+// sync.Once - .Do() will be executed not more than once
 func Test_Once(t *testing.T) {
 
 	cnt := 0
@@ -216,6 +208,7 @@ func Test_OnceDo(t *testing.T) {
 }
 
 // sync.Pool
+// reusing the instances from the pool instead of instantiating the new ones
 func Test_Pool(t *testing.T) {
 
 	myPool := &sync.Pool{
@@ -248,7 +241,7 @@ func Test_CloseChan(t *testing.T) {
 	go func() {
 		log.Println("Closing channel")
 		close(dataStream)
-	}()
+	}() // just to illustrate next lines
 
 	log.Println("Blocking on read from open channel")
 	message, ok = <-dataStream
@@ -262,11 +255,12 @@ func Test_CloseChan(t *testing.T) {
 	log.Println("Reading from Closed channel")
 	message, ok = <-dataStream
 	log.Println("Closed channel read is not blocking")
-	assert.False(t, ok)          // channel closed
+	assert.False(t, ok)          // channel closed, ok == false
 	assert.Equal(t, "", message) // no message received
 
-	// closing of closed channel will panic
-	// close(dataStream)
+	if ok { // closing of closed channel will panic
+		close(dataStream)
+	}
 
 	// check before close:
 	if _, ok := <-dataStream; ok {
@@ -891,6 +885,25 @@ func StageFn[T any](done <-chan any, input <-chan T, fn func(v T) T) <-chan T {
 	return outChan
 }
 
+// Repeat repeats the values until done is closed.
+func Repeat[T any](done <-chan any, values ...T) <-chan T {
+	outChan := make(chan T)
+	go func() {
+		defer close(outChan)
+		for {
+			for _, value := range values {
+				select {
+				case <-done:
+					return
+				case outChan <- value:
+				}
+			}
+		}
+
+	}()
+	return outChan
+}
+
 // RepeatFn repeats the result of fn() until done is closed.
 func RepeatFn[T any](done <-chan any, fn func() T) <-chan T {
 	outChan := make(chan T)
@@ -997,7 +1010,7 @@ func Test_GeneratortoStage(t *testing.T) {
 }
 
 // fan-in pattern - merge multiple channels into one
-var fanIn = func(done <-chan any, channels ...<-chan any) <-chan any {
+func fanIn(done <-chan any, channels ...<-chan any) <-chan any {
 	var wg sync.WaitGroup
 	multiplexedStream := make(chan any)
 
@@ -1065,11 +1078,29 @@ func Test_FanIn(t *testing.T) {
 	fmt.Printf("Search took: %v\n", time.Since(start))
 }
 
-// TODO: take a closer look at these two:
+// or-done-channel (or done channel)
+/*
+	// allows to make simple loops like this one:
+	for val := range OrDone(done, myChan) {
+		// Do something with val
+	}
 
-// ordone channel
-var orDone = func(done, c <-chan interface{}) <-chan interface{} {
-	valStream := make(chan interface{})
+	//instead of monstrocity like this:
+	loop:
+	for {
+		select {
+		case <-done:
+			break loop
+		case maybeVal, ok := <-myChan:
+			if ok==false {
+				return // or maybe break from for
+			}
+			// Do something with val
+		}
+	}
+*/
+func OrDone(done, c <-chan any) <-chan any {
+	valStream := make(chan any)
 	go func() {
 		defer close(valStream)
 		for {
@@ -1090,16 +1121,19 @@ var orDone = func(done, c <-chan interface{}) <-chan interface{} {
 	return valStream
 }
 
-// bridge channel
-var bridge = func(
-	done <-chan interface{},
-	chanStream <-chan <-chan interface{},
-) <-chan interface{} {
-	valStream := make(chan interface{})
+// Bridge channel
+// consume values from a sequence of channels (channel of channels here):
+//
+//	<-chan <-chan any
+//
+// destructure the channel of channels into a simple channel:
+func Bridge(done <-chan any, chanStream <-chan <-chan any) <-chan any {
+	valStream := make(chan any)
 	go func() {
 		defer close(valStream)
 		for {
-			var stream <-chan interface{}
+
+			var stream <-chan any
 			select {
 			case maybeStream, ok := <-chanStream:
 				if ok == false {
@@ -1109,7 +1143,8 @@ var bridge = func(
 			case <-done:
 				return
 			}
-			for val := range orDone(done, stream) {
+
+			for val := range OrDone(done, stream) {
 				select {
 				case valStream <- val:
 				case <-done:
@@ -1120,12 +1155,62 @@ var bridge = func(
 	return valStream
 }
 
-// I'll take a brake from the concurrency patterns for now
-// ... to be continued
-//
-//
-//
-//
+func Test_BridgeChannel(t *testing.T) {
+	genVals := func() <-chan <-chan any {
+		chanStream := make(chan (<-chan any))
+		go func() {
+			defer close(chanStream)
+
+			for i := 0; i < 10; i++ {
+				stream := make(chan any, 1)
+				stream <- i
+				close(stream)
+				chanStream <- stream
+			}
+
+		}()
+		return chanStream
+	}
+	i := 0
+	for v := range Bridge(nil, genVals()) {
+		fmt.Printf("%v ", v)
+		assert.Equal(t, i, v)
+		i++
+	}
+	assert.Equal(t, 10, i)
+}
+
+// tee-channel - receives values from one channel and passes it to two separate channels
+func Tee(done <-chan any, in <-chan any) (_, _ <-chan any) {
+	out1 := make(chan any)
+	out2 := make(chan any)
+	go func() {
+		defer close(out1)
+		defer close(out2)
+		for val := range OrDone(done, in) {
+			var out1, out2 = out1, out2
+			for i := 0; i < 2; i++ {
+				select {
+				case <-done:
+				case out1 <- val:
+					out1 = nil
+				case out2 <- val:
+					out2 = nil
+				}
+			}
+		}
+	}()
+	return out1, out2
+}
+
+func Test_TeeChannel(t *testing.T) {
+	done := make(chan any)
+	defer close(done)
+	out1, out2 := Tee(done, Take(done, Repeat[any](done, 1, 2), 4))
+	for val1 := range out1 {
+		fmt.Printf("out1: %v, out2: %v\n", val1, <-out2)
+	}
+}
 
 // CONTEXT
 
@@ -1866,7 +1951,7 @@ var doWorkFn = func(
 	done <-chan interface{}, intList ...int,
 ) (startGoroutineFn, <-chan interface{}) {
 	intChanStream := make(chan (<-chan interface{}))
-	intStream := bridge(done, intChanStream)
+	intStream := Bridge(done, intChanStream)
 	doWork := func(
 		done <-chan interface{},
 		pulseInterval time.Duration) <-chan interface{} {
