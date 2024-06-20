@@ -2008,3 +2008,276 @@ func Test_Steward_Meaningful_Ward(t *testing.T) {
 		fmt.Printf("Received: %v\n", intVal)
 	}
 }
+
+// Some more concurrency patterns drilling, during Ardanlabs Ultimate Go videos:
+
+// Fan-out pattern
+func Test_FanOut(t *testing.T) {
+
+	total := 2000
+
+	results := make(chan int, total)
+	for i := range total { // spawning 2000 goroutines
+		go func() {
+			time.Sleep(200 * time.Millisecond)
+			results <- i
+		}()
+	}
+
+	totalReceived := 0
+	for range total {
+		<-results
+		totalReceived++
+	}
+	assert.Equal(t, totalReceived, total)
+}
+
+// fan-out with semaphore rate limit
+func Test_RateLimitedFanOut(t *testing.T) {
+	total := 2000
+	results := make(chan int, total)
+
+	limit := 200
+	limiter := make(chan any, limit)
+
+	for i := range total {
+		go func() {
+			limiter <- true
+			time.Sleep(100 * time.Millisecond)
+			results <- i
+		}()
+	}
+
+	totalReceived := 0
+	for range total {
+		<-results
+		<-limiter
+		totalReceived++
+	}
+	assert.Equal(t, totalReceived, total)
+}
+
+// wait-for-task, fancy version
+func waitForTask(sendTasks, receiveTasks int, sWait, rWait time.Duration) int32 {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	done := make(chan any)
+	tasks := make(chan int)
+	var totalReceived int32
+
+	// worker
+	go func(context.Context) {
+		defer close(done)
+		for range receiveTasks {
+			select {
+			case task, ok := <-tasks:
+				if !ok {
+					return
+				}
+				atomic.AddInt32(&totalReceived, 1)
+				log.Println("task received:", task)
+				time.Sleep(rWait) // simulate delay on receive side
+			case <-ctx.Done():
+				return
+			}
+		}
+	}(ctx)
+
+	for i := range sendTasks {
+		select {
+		case tasks <- i:
+			time.Sleep(sWait) // sumulate delay on the send side
+		case <-ctx.Done():
+			return atomic.LoadInt32(&totalReceived)
+		}
+	}
+	cancel() // don't wait till timeout happens
+	<-done
+	return totalReceived
+}
+
+func Test_WaitForTask(t *testing.T) {
+
+	// testing with different values
+
+	// happy path
+	received := waitForTask(5, 5, time.Duration(0), time.Duration(0))
+	assert.Equal(t, int32(5), received)
+
+	// waiting for 6 result, but sending 5 tasks
+	received = waitForTask(5, 6, time.Duration(0), time.Duration(0))
+	assert.Equal(t, int32(5), received)
+
+	// waiting for 5 result, but sending 6 tasks
+	// timed out, but correctly received 5 results
+	received = waitForTask(6, 5, time.Duration(0), time.Duration(0))
+	assert.Equal(t, int32(5), received)
+
+	// 1 second delay after each send
+	// only 2-3 tasks processed, 2-3 results received before timeout
+	received = waitForTask(6, 5, time.Second, time.Duration(0))
+	assert.LessOrEqual(t, int32(2), received)
+
+	// 1 second delay after each receive
+	// only 2-3 tasks processed, 2-3 results received before timeout
+	received = waitForTask(6, 5, time.Duration(0), time.Second)
+	assert.LessOrEqual(t, int32(2), received)
+
+	// 1 second delay after each receive and send
+	// only 1-2 tasks processed, 1-2 results received before timeout
+	// second task can come before timeout hits
+	received = waitForTask(6, 5, time.Duration(0), time.Second)
+	assert.LessOrEqual(t, int32(1), received)
+}
+
+// Bill's example actually didn't work without waitgroup
+func Test_BasicPooling(t *testing.T) {
+
+	totalTasks := 100
+	var received atomic.Int32
+
+	wg := sync.WaitGroup{}
+
+	g := runtime.NumCPU()
+	tasks := make(chan int)
+	for wi := range g {
+		go func(worker int) {
+			for task := range tasks {
+				fmt.Println("Worker", wi, "received task", task)
+				received.Add(1)
+				wg.Done()
+			}
+			fmt.Println("Worker", wi, "shut down")
+		}(wi)
+	}
+
+	for task := range totalTasks {
+		wg.Add(1)
+		tasks <- task
+	}
+	close(tasks)
+
+	wg.Wait()
+	assert.Equal(t, int32(totalTasks), received.Load())
+}
+
+// limited amount of goroutines working on a bunch of tasks
+func Test_BoundedFanout(t *testing.T) {
+
+	var received atomic.Int32
+
+	workers := runtime.NumCPU()
+
+	wg := sync.WaitGroup{}
+	wg.Add(workers)
+
+	tasksCh := make(chan int)
+	// receiving tasks, dispatching workers
+	for wi := range workers {
+		go func(worker int) {
+			defer wg.Done()
+			for task := range tasksCh {
+				received.Add(1)
+				log.Println("Task", task, "received by worker", worker)
+			}
+		}(wi)
+	}
+
+	// sending tasks
+	totalTasks := 200
+	for task := range totalTasks {
+		tasksCh <- task
+	}
+	close(tasksCh)
+	wg.Wait()
+
+	assert.Equal(t, int32(totalTasks), received.Load())
+}
+
+// Drop pattern - drop tasks after some cap
+// Bill's example with time.Sleep is incorrect again
+func Test_DropPattern(t *testing.T) {
+
+	var received atomic.Int32
+
+	totalTasks := 2000
+	cap := 200
+
+	done := make(chan any)
+
+	taskCh := make(chan int, cap)
+	// receiving side
+	go func() {
+		defer close(done)
+		for range taskCh {
+			received.Add(1)
+			// log.Println("received task")
+		}
+	}()
+
+	// send side
+	for task := range totalTasks {
+		select {
+		case taskCh <- task:
+			//task sent
+		default:
+			//task dropped
+		}
+	}
+
+	close(taskCh)
+	<-done
+	assert.LessOrEqual(t, int32(200), received.Load(), "~200 should be received")
+}
+
+// Cancellation pattern
+
+func Test_Cancel_Buffered(t *testing.T) {
+	timeout := 150 * time.Millisecond
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	taskCh := make(chan any, 1)
+	go func() {
+		time.Sleep(200 * time.Millisecond)
+		taskCh <- "result"
+	}()
+
+	select {
+	case res := <-taskCh:
+		log.Println("result received", res)
+	case <-ctx.Done():
+		log.Println("timeout reached")
+	}
+
+	time.Sleep(time.Second)
+	log.Println("---- end")
+}
+
+func Test_Cancel_UnBuffered(t *testing.T) {
+	timeout := 150 * time.Millisecond
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	taskCh := make(chan any)
+	go func() {
+		time.Sleep(200 * time.Millisecond)
+		select {
+		case taskCh <- "result":
+			log.Println("result sent")
+		case <-ctx.Done():
+			log.Println("timeout reached on send side")
+		}
+	}()
+
+	select {
+	case res := <-taskCh:
+		log.Println("result received", res)
+	case <-ctx.Done():
+		log.Println("timeout reached")
+	}
+
+	time.Sleep(time.Second)
+	log.Println("---- end")
+}
