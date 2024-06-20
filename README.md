@@ -22,6 +22,7 @@ Some notes, examples, and solutions to problems I've encountered while learning 
 - [Build Your Own Redis challenge](https://github.com/parMaster/byo-http-server) - a solution to the Build Your Own Redis challenge. Separate repo, but still relevant
 - [Build Your Own Redis challenge](https://github.com/parMaster/byo-http-server) - a solution to the Build Your Own HTTP Server challenge. Separate repo as well
 - [HackerRank problems](https://github.com/parMaster/go-solutions/blob/main/HackerRank) - first steps with Go on HackerRank
+- [Exercism exercices (Medium+)](https://github.com/parMaster/go-solutions/tree/main/Exercism/go) - solutions to the Exercism exercises in Go (Medium and above) [Exercism profile](https://exercism.org/profiles/parMaster)
 
 ## Sandbox
 - [Linked List](https://github.com/parMaster/go-solutions/blob/main/sandbox/Linked-Lists_test.go) - linked list implemented with generics
