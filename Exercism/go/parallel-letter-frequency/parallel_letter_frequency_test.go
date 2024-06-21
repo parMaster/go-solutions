@@ -193,3 +193,12 @@ func BenchmarkConcurrentFrequency(b *testing.B) {
 		ConcurrentFrequency([]string{dostoevsky2, dostoevsky1, dostoevsky3, dostoevsky4})
 	}
 }
+
+func BenchmarkConcurrentFrequencyFanOut(b *testing.B) {
+	if testing.Short() {
+		b.Skip("skipping benchmark in short mode.")
+	}
+	for i := 0; i < b.N; i++ {
+		ConcurrentFrequency_basic([]string{dostoevsky2, dostoevsky1, dostoevsky3, dostoevsky4})
+	}
+}
