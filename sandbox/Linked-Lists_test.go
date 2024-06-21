@@ -39,7 +39,6 @@ func (list *LinkedList[T]) Add(data T) {
 }
 
 func (list *LinkedList[T]) Traverse(f func(*ListNode[T])) {
-
 	if list.head == nil {
 		return
 	}
@@ -50,6 +49,18 @@ func (list *LinkedList[T]) Traverse(f func(*ListNode[T])) {
 		current = current.next
 		f(current)
 	}
+}
+
+func (list *LinkedList[T]) Size() int {
+	size := 0
+	if list.head == nil {
+		return size
+	}
+
+	list.Traverse(func(*ListNode[T]) {
+		size++
+	})
+	return size
 }
 
 func Test_AddTraverse(t *testing.T) {
@@ -137,6 +148,14 @@ func Test_LoadDelete(t *testing.T) {
 	res = list.Delete("A")
 	assert.True(t, res, "delete first result")
 	assert.Equal(t, []string{"B", "C"}, list.Save(), "delete first")
+}
+
+func Test_LoadSizeDelete(t *testing.T) {
+	// Middle
+	list := Load([]string{"A", "B", "C"})
+	assert.Equal(t, 3, list.Size())
+	list.Delete("B")
+	assert.Equal(t, 2, list.Size())
 }
 
 // ToDo:
