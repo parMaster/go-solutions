@@ -5,32 +5,19 @@ import (
 	"math"
 )
 
-func CanQueenAttack(whitePosition, blackPosition string) (bool, error) {
-	// invalid input
-	if len(whitePosition) != 2 || len(blackPosition) != 2 ||
-		whitePosition == blackPosition ||
-		int(whitePosition[0])-97 > 7 || int(blackPosition[0])-97 > 7 ||
-		int(whitePosition[1])-48 > 8 || int(blackPosition[1])-48 > 8 ||
-		int(whitePosition[1])-48 < 1 || int(blackPosition[1])-48 < 1 {
-		return false, errors.New("invalid inpit")
+func CanQueenAttack(wp, bp string) (bool, error) {
+
+	if len(wp) != 2 || len(bp) != 2 ||
+		wp == bp ||
+		wp[0] < 'a' || bp[0] < 'a' ||
+		wp[0] > 'h' || bp[0] > 'h' ||
+		wp[1]-0x30 > 8 || bp[1]-0x30 > 8 ||
+		wp[1]-0x30 < 1 || bp[1]-0x30 < 1 {
+		return false, errors.New("invalid input")
 	}
 
-	p1 := [2]int{
-		int(whitePosition[0]) - 97,
-		int(whitePosition[1]),
-	}
-
-	p2 := [2]int{
-		int(blackPosition[0]) - 97,
-		int(blackPosition[1]),
-	}
-
-	// on the same row/col
-	if p1[0] == p2[0] || p1[1] == p2[1] {
-		return true, nil
-	}
-
-	if math.Abs(float64(p1[0]-p2[0])) == math.Abs(float64(p1[1]-p2[1])) {
+	if wp[0] == bp[0] || wp[1] == bp[1] || // same col/row
+		math.Abs(float64(int(wp[0])-int(bp[0]))) == math.Abs(float64(int(wp[1])-int(bp[1]))) { // share diagonal
 		return true, nil
 	}
 
