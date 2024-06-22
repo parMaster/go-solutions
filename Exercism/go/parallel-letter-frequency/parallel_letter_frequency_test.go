@@ -160,6 +160,14 @@ func OriginalFrequency(s string) FreqMap {
 	return m
 }
 
+func TestConcurrentFrequency_select(t *testing.T) {
+	seq := OriginalFrequency(dostoevsky2 + dostoevsky1 + dostoevsky3 + dostoevsky4)
+	con := ConcurrentFrequency_selects([]string{dostoevsky2, dostoevsky1, dostoevsky3, dostoevsky4})
+	if !reflect.DeepEqual(con, seq) {
+		t.Fatal("ConcurrentFrequency wrong result")
+	}
+}
+
 func TestConcurrentFrequency(t *testing.T) {
 	seq := OriginalFrequency(dostoevsky2 + dostoevsky1 + dostoevsky3 + dostoevsky4)
 	con := ConcurrentFrequency([]string{dostoevsky2, dostoevsky1, dostoevsky3, dostoevsky4})

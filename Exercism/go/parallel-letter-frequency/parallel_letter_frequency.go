@@ -1,6 +1,10 @@
 package letter
 
-import "runtime"
+import (
+	"log"
+	"runtime"
+	"time"
+)
 
 // FreqMap records the frequency of each rune in a given text.
 type FreqMap map[rune]int
@@ -68,4 +72,71 @@ func ConcurrentFrequency_basic(texts []string) FreqMap {
 	}
 
 	return fm
+}
+
+func ConcurrentFrequency_selects(texts []string) FreqMap {
+
+	countFreqs := func(done <-chan any, texts <-chan string) (freqMap chan FreqMap, terminated chan any) {
+		terminated = make(chan any)
+		freqMap = make(chan FreqMap)
+
+		go func() {
+			defer close(terminated)
+			for {
+				select {
+				case text := <-texts:
+					fm := FreqMap{}
+					for _, c := range text {
+						fm[c]++
+					}
+					freqMap <- fm
+				case <-done:
+					return
+				}
+			}
+		}()
+
+		return freqMap, terminated
+	}
+
+	done := make(chan any)
+	textsCh := make(chan string)
+
+	freqMapCh, terminated := countFreqs(done, textsCh)
+
+	fm := FreqMap{}
+
+	// timeout circuit breaker
+	go func() {
+		select {
+		case <-terminated:
+			close(done)
+		case <-time.After(200 * time.Second):
+			close(done)
+		}
+	}()
+
+	go func() {
+		for _, text := range texts {
+			textsCh <- text
+			log.Println("text sent")
+		}
+	}()
+
+	for {
+		select {
+		case <-done:
+			log.Println("terminated (done)")
+			return fm
+		case <-terminated:
+			log.Println("terminated")
+			return fm
+		case result := <-freqMapCh:
+			for c, freq := range result {
+				fm[c] += freq
+			}
+			log.Println("result received")
+		}
+		time.Sleep(1 * time.Microsecond)
+	}
 }
