@@ -1,9 +1,13 @@
 package letter
 
 import (
+	"context"
+	"errors"
 	"log"
 	"runtime"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 )
 
 // FreqMap records the frequency of each rune in a given text.
@@ -17,6 +21,52 @@ func Frequency(text string) FreqMap {
 		frequencies[r]++
 	}
 	return frequencies
+}
+
+var ErrEmptyText = errors.New("empty text")
+
+// using errgroup
+func ConcurrentFrequencyErrGroup(texts []string) (FreqMap, error) {
+
+	count := func(ctx context.Context, texts []string) ([]FreqMap, error) {
+		g, _ := errgroup.WithContext(ctx)
+		results := make([]FreqMap, len(texts))
+		for i, text := range texts {
+			text := text
+			g.Go(func() error {
+				fm := FreqMap{}
+				if len(text) == 0 {
+					return ErrEmptyText
+				}
+				for _, c := range text {
+					fm[c]++
+				}
+				results[i] = fm
+
+				return nil
+			})
+		}
+
+		if err := g.Wait(); err != nil {
+			return nil, err
+		}
+
+		return results, nil
+	}
+
+	fm := FreqMap{}
+	cnt, err := count(context.Background(), texts)
+	if err != nil {
+		log.Println("error returned", err)
+		return fm, err
+	}
+	for _, res := range cnt {
+		for r, freq := range res {
+			fm[r] += freq
+		}
+	}
+
+	return fm, nil
 }
 
 // basic fan-out with semaphore rate limit
@@ -111,7 +161,7 @@ func ConcurrentFrequency_selects(texts []string) FreqMap {
 		select {
 		case <-terminated:
 			close(done)
-		case <-time.After(200 * time.Second):
+		case <-time.After(2 * time.Second):
 			close(done)
 		}
 	}()

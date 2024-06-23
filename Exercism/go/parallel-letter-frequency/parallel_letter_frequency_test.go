@@ -1,6 +1,7 @@
 package letter
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 )
@@ -160,6 +161,25 @@ func OriginalFrequency(s string) FreqMap {
 	return m
 }
 
+func TestConcurrentFrequency_ErrGroup(t *testing.T) {
+	seq := OriginalFrequency(dostoevsky2 + dostoevsky1 + dostoevsky3 + dostoevsky4)
+	con, err := ConcurrentFrequencyErrGroup([]string{dostoevsky2, dostoevsky1, dostoevsky3, dostoevsky4})
+	if err != nil {
+		t.Fatal("Unexpected error", err)
+	}
+	if !reflect.DeepEqual(con, seq) {
+		t.Fatal("ConcurrentFrequency wrong result")
+	}
+
+	_, err = ConcurrentFrequencyErrGroup([]string{dostoevsky2, dostoevsky1, dostoevsky3, dostoevsky4, ""})
+	if err == nil {
+		t.Fatal("Error expected", err)
+	}
+	if !errors.Is(err, ErrEmptyText) {
+		t.Fatal("Expected", ErrEmptyText, "error,", err, "received instead")
+	}
+}
+
 func TestConcurrentFrequency_select(t *testing.T) {
 	seq := OriginalFrequency(dostoevsky2 + dostoevsky1 + dostoevsky3 + dostoevsky4)
 	con := ConcurrentFrequency_selects([]string{dostoevsky2, dostoevsky1, dostoevsky3, dostoevsky4})
@@ -190,6 +210,15 @@ func BenchmarkSequentialFrequency(b *testing.B) {
 	}
 	for i := 0; i < b.N; i++ {
 		Frequency(dostoevsky2 + dostoevsky1 + dostoevsky3 + dostoevsky4)
+	}
+}
+
+func BenchmarkConcurrentFrequencyErrGroup(b *testing.B) {
+	if testing.Short() {
+		b.Skip("skipping benchmark in short mode.")
+	}
+	for i := 0; i < b.N; i++ {
+		ConcurrentFrequencyErrGroup([]string{dostoevsky2, dostoevsky1, dostoevsky3, dostoevsky4})
 	}
 }
 
