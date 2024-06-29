@@ -5,6 +5,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -12,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/sync/errgroup"
 )
 
 func Test_Runes(t *testing.T) {
@@ -336,5 +338,111 @@ func Test_Worker(t *testing.T) {
 	assert.Equal(t, 10, received)
 }
 
-// todo: exercise: read bytes from file, spin up a pool of goroutines that count a number of
-// some specific byte
+// cool trick - assing nil to a closed channel to skip it till waiting for the second channel
+func merge(ch1, ch2 <-chan int) <-chan int {
+	ch := make(chan int, 1)
+	go func() {
+		for ch1 != nil || ch2 != nil {
+			select {
+			case v, open := <-ch1:
+				if !open {
+					ch1 = nil
+					break
+				}
+				ch <- v
+			case v, open := <-ch2:
+				if !open {
+					ch2 = nil
+					break
+				}
+				ch <- v
+			}
+		}
+		close(ch)
+	}()
+	return ch
+}
+
+func Test_Merge(t *testing.T) {
+
+	ch1 := make(chan int)
+	go func() {
+		for i := range 10 {
+			ch1 <- i
+		}
+		close(ch1)
+	}()
+	ch2 := make(chan int)
+	go func() {
+		for i := range 10 {
+			ch2 <- i
+		}
+		close(ch2)
+	}()
+
+	mergedCh := merge(ch1, ch2)
+
+	received := 0
+	for res := range mergedCh {
+		log.Println("result received", res)
+		received++
+	}
+	assert.Equal(t, 20, received)
+}
+
+func Test_ErrGroup(t *testing.T) {
+	// creates a shared context using in all parallels goroutines
+	eg, ctx := errgroup.WithContext(context.TODO())
+
+	for val := range 100 {
+		// The process invoked by g.Go must be context aware.
+		// Otherwise, canceling the context won’t have any effect
+		eg.Go(func() error {
+			if val%2 != 0 {
+				return fmt.Errorf("odd value: %v", val)
+			}
+			fmt.Println("even value", val)
+
+			// foo(ctx)
+			// would get shared context
+			// first error would cancel the shared context
+
+			return nil
+		})
+	}
+
+	if err := eg.Wait(); err != nil {
+		fmt.Println("errgroup error: ", err)
+		// returns one error:
+		// errgroup error:  odd value: 1
+		//
+	}
+	<-ctx.Done()
+}
+
+// unmarshal to map[string]any gives a map of key=>val
+func Test_UnmarshalToMapOfAny(t *testing.T) {
+
+	person := struct {
+		Id     int
+		Age    int
+		Height float32
+		Bio    string
+		Sex    bool
+	}{1, 2, 178.6, "the dude", true}
+
+	tm, err := json.Marshal(person)
+	assert.NoError(t, err)
+
+	var m map[string]any
+
+	json.Unmarshal(tm, &m)
+
+	log.Println(m) // map[Age:2 Bio:the dude Height:178.6 Id:1 Sex:true]
+
+	assert.Equal(t, float64(2), m["Age"]) // numerics unmarshalled to "any" as float64
+
+	assert.InDelta(t, float64(178.6), m["Height"], 0.01) // float => float64
+	assert.Equal(t, "the dude", m["Bio"])                // strings are just strings
+	assert.Equal(t, true, m["Sex"])                      // bools are bools
+}
