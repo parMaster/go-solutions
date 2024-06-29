@@ -101,6 +101,7 @@ func BenchmarkCountConcurrent(b *testing.B) {
 	ReadCountConcurrent("smc.txt", 's')
 }
 
+// More like a producer-consumer, io running concurrently with counting
 func ReadCountConcurrentJobs(file string, char byte) int {
 	f, err := os.OpenFile(file, os.O_RDONLY, 0o644)
 	if err != nil {
@@ -131,7 +132,11 @@ func ReadCountConcurrentJobs(file string, char byte) int {
 		return results
 	}
 
+	// one io runs concurrently with one counting goroutine
 	jobs := make(chan []byte)
+
+	// io bound - will feed jobs queue as fast as it can read file
+	// jobs := make(chan []byte, 10)
 
 	go func(f io.ReadCloser) {
 		for {
@@ -151,6 +156,7 @@ func ReadCountConcurrentJobs(file string, char byte) int {
 
 	resCh := counter(jobs)
 
+	// reads until resCh is closed
 	for res := range resCh {
 		sum += res
 	}
