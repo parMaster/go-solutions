@@ -266,6 +266,51 @@ func Test_ErrorIs(t *testing.T) {
 	assert.True(t, errors.Is(fooErr, ErrFoo))
 }
 
+// interview problem with errors:
+
+type MyErr struct{}
+
+func (m MyErr) Error() string {
+	return "my error string"
+}
+
+func returnError() error {
+	var err error // nil
+	return err    // returning nil
+}
+
+func returnErrorPtr() *error {
+	var err *error // nil
+	return err     // returning nil
+}
+
+func returnCustomError() error {
+	var err MyErr // valiable created
+	return err    // returned variable, not nil
+}
+
+func returnCustomErrorPtr() error {
+	var err *MyErr // pointer to a struct of type MyErr
+	return err     // not nil
+}
+
+func returnMyError() *MyErr {
+	return nil // explicitly returning nil
+}
+
+func Test_ReturnErrors(t *testing.T) {
+	assert.Nil(t, returnError())
+	assert.Nil(t, returnErrorPtr())
+	assert.NotNil(t, returnCustomError())
+
+	assert.Nil(t, returnCustomErrorPtr())
+	assert.Equal(t, false, returnCustomErrorPtr() == nil) // !!!
+
+	assert.Nil(t, returnMyError())
+}
+
+// /interview problem
+
 func Test_DeferError(t *testing.T) {
 
 	errf := func(i int) (err error) {
