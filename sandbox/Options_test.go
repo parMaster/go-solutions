@@ -1,207 +1,101 @@
 package sandbox
 
-// Remembering Options options
-// no copilot
-
 import (
-	"fmt"
 	"testing"
 
-	log "github.com/go-pkgz/lgr"
 	"github.com/stretchr/testify/assert"
 )
 
-type Worker struct {
+type Opts struct {
 	cmd   string
 	flags []string
 	twist bool
 	cnt   int
 }
 
-func NewWorker() *Worker {
-	return &Worker{}
-}
+type OptsFunc func(*Opts)
 
-// Getters-setters kind of options:
-
-func (w *Worker) WithCmd(cmd string) error {
-	if cmd == "" {
-		return fmt.Errorf("WithCmd received empty cmd: %s", cmd)
-	}
-	w.cmd = cmd
-	return nil
-}
-
-// Trigger option
-
-func (w *Worker) Twist() {
-	w.twist = true
-}
-
-func Test_Options(t *testing.T) {
-
-	w := NewWorker()
-	w.WithCmd("/usr/sbin/cmd")
-
-}
-
-// Func option
-
-type Option func(w *Worker)
-
-func WithFlags(flags []string) Option {
-	return func(w *Worker) {
-		w.flags = append(w.flags, flags...)
+func DefaultOpts() Opts {
+	return Opts{
+		cmd:   "echo",
+		flags: []string{"-v"},
+		twist: false,
+		cnt:   1,
 	}
 }
 
-func NewOptsWorker(opts ...Option) *Worker {
-	w := Worker{}
-	for _, opt := range opts {
-		opt(&w)
-	}
-	return &w
-}
-
-func (w *Worker) InspectFlags() []string {
-	return w.flags
-}
-
-func Test_FuncOptions(t *testing.T) {
-
-	w := NewOptsWorker(
-		WithFlags([]string{"test"}),
-		WithFlags([]string{"test", "test"}),
-	)
-
-	assert.Equal(t, []string{"test", "test", "test"}, w.InspectFlags())
-}
-
-// Once again
-
-type Opt func(w *Worker)
-
-func Inc(n int) Opt {
-	return func(w *Worker) {
-		if n > 1 {
-			w.cnt += n
-		} else {
-			w.cnt++
-		}
+func WithOpts(newOpts Opts) OptsFunc {
+	return func(opts *Opts) {
+		opts.cmd = newOpts.cmd
+		opts.twist = newOpts.twist
+		opts.flags = newOpts.flags
+		opts.cnt = newOpts.cnt
 	}
 }
 
-func NewWOpt(opts ...Opt) *Worker {
-	w := Worker{}
-
-	for _, opt := range opts {
-		opt(&w)
-	}
-
-	return &w
+func WithATwist(opts *Opts) {
+	opts.twist = true
 }
 
-func Test_FuncOpts(t *testing.T) {
-
-	w := NewWOpt(Inc(1), Inc(1), Inc(10))
-
-	assert.Equal(t, 12, w.cnt)
-}
-
-// ===
-// === ChatGPTs best take on options
-
-// Config is the struct we want to initialize with various options
-type Config struct {
-	Option1 string
-	Option2 int
-	Option3 bool
-}
-
-// ConfigOption is a functional option type that modifies the Config struct
-type ConfigOption func(*Config)
-
-// WithOption1 sets the Option1 field of the Config struct
-func WithOption1(value string) ConfigOption {
-	return func(c *Config) {
-		c.Option1 = value
+func WithFlags(flags []string) OptsFunc {
+	return func(opts *Opts) {
+		opts.flags = flags
 	}
 }
 
-// WithOption2 sets the Option2 field of the Config struct
-func WithOption2(value int) ConfigOption {
-	return func(c *Config) {
-		c.Option2 = value
+func WithCmd(cmd string) OptsFunc {
+	return func(opts *Opts) {
+		opts.cmd = cmd
 	}
 }
 
-// WithOption3 sets the Option3 field of the Config struct
-func WithOption3(value bool) ConfigOption {
-	return func(c *Config) {
-		c.Option3 = value
+type Worker struct {
+	Opts
+}
+
+func NewWorker(opts ...OptsFunc) *Worker {
+	o := DefaultOpts()
+
+	for _, optFunc := range opts {
+		optFunc(&o)
+	}
+
+	return &Worker{
+		Opts: o,
 	}
 }
 
-// NewConfig initializes a Config instance with the provided options
-func NewConfig(options ...ConfigOption) *Config {
-	config := &Config{}
+func Test_Opts(t *testing.T) {
 
-	// Apply each option to the config
-	for _, option := range options {
-		option(config)
+	defaultOpts := DefaultOpts()
+
+	defaultW := NewWorker()
+	assert.Equal(t, defaultW.Opts, defaultOpts)
+
+	defaultOpts.twist = true
+	w := NewWorker(WithATwist)
+	assert.Equal(t, w.Opts, defaultOpts)
+
+	defaultOpts.twist = true
+	defaultOpts.cmd = "ls"
+	defaultOpts.flags = []string{"one", "two", "three"}
+
+	w = NewWorker(WithATwist,
+		WithFlags([]string{"one", "two", "three"}),
+		WithCmd("ls"))
+	assert.Equal(t, w.Opts, defaultOpts)
+}
+
+func TestWithOpts(t *testing.T) {
+
+	newOpts := Opts{
+		cmd:   "ps",
+		flags: []string{"-a", "-u", "-x"},
+		twist: true,
+		cnt:   16,
 	}
 
-	return config
-}
+	w := NewWorker(WithOpts(newOpts))
+	assert.Equal(t, newOpts, w.Opts)
 
-func main() {
-	// Create a new Config instance with various options
-	config := NewConfig(
-		WithOption1("Value 1"),
-		WithOption2(42),
-		WithOption3(true),
-	)
-
-	// Print the configured values
-	fmt.Println("Option1:", config.Option1)
-	fmt.Println("Option2:", config.Option2)
-	fmt.Println("Option3:", config.Option3)
-}
-
-// In this example, we define a Config struct with three configurable options: Option1, Option2, and Option3.
-// We also define functional option types like WithOption1, WithOption2, and WithOption3 that modify the respective
-// fields in the Config struct. The NewConfig function takes a variadic number of these options and applies them
-// to create a new Config instance.
-
-// This approach allows you to create instances of the Config struct with different combinations of options,
-// making the code more readable and maintaining a clear separation of concerns.
-
-//
-
-//
-
-/// Once again
-
-type M struct {
-	config string
-}
-
-func (m *M) Report() {
-	log.Printf("m.config=%s", m.config)
-}
-
-type FOpt func(*M)
-
-func NewM(opts ...FOpt) *M {
-	m := M{}
-	for _, o := range opts {
-		o(&m)
-	}
-	return &m
-}
-
-func WithOpt1(opt string) FOpt {
-	return func(m *M) {
-		m.config = opt
-	}
 }
