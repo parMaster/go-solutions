@@ -39,7 +39,7 @@ func (p *Parser) Parse(file string) error {
 
 	f, err := os.Open(file)
 	if err != nil {
-		return fmt.Errorf("Can't open '%s': %e", file, err)
+		return fmt.Errorf("can't open '%s': %e", file, err)
 	}
 
 	b := bufio.NewReader(f)
