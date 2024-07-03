@@ -220,5 +220,4 @@ func Test_WorkerWait(t *testing.T) {
 		println(v)
 	}
 	println(int(time.Since(timeStart).Seconds())) // 3 sec
-
 }
