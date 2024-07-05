@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	"golang.org/x/sync/errgroup"
 )
@@ -10,25 +12,35 @@ import (
 type Value struct{}
 
 func JustError() error {
-	g := new(errgroup.Group)
+	g, ctx := errgroup.WithContext(context.Background())
 	var urls = []string{
 		"http://www.golang.org/",
+		"http://www.somestupidname.com/",
 		"http://www.somestupidname.com/",
 		"http://www.google.com/",
 	}
 	for _, url := range urls {
+		time.Sleep(time.Second)
+
 		// Launch a goroutine to fetch the URL.
-		url := url // https://golang.org/doc/faq#closures_and_goroutines
 		g.Go(func() error {
-			// Fetch the URL.
-			resp, err := http.Get(url)
-			fmt.Println("fetching", url)
-			if err == nil {
-				resp.Body.Close()
+
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			default:
+				// Fetch the URL.
+				resp, err := http.Get(url)
+				fmt.Println("fetching", url)
+				if err == nil {
+					resp.Body.Close()
+				}
+				// first returned error that != nil will cancel the context
+				return err
 			}
-			return err
 		})
 	}
+
 	// Wait for all HTTP fetches to complete.
 	err := g.Wait()
 	if err != nil {
@@ -41,4 +53,5 @@ func JustError() error {
 func main() {
 	err := JustError()
 	fmt.Println(err)
+
 }
