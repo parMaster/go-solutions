@@ -74,12 +74,6 @@ github.com/hajimehoshi/ebiten/v2/internal/ui
 github.com/hajimehoshi/ebiten/v2/internal/vibrate
 github.com/hajimehoshi/ebiten/v2/internal/winver
 github.com/hajimehoshi/ebiten/v2/vector
-# github.com/jackpal/gateway v1.0.10
-## explicit; go 1.20
-github.com/jackpal/gateway
-# github.com/jackpal/go-nat-pmp v1.0.2
-## explicit
-github.com/jackpal/go-nat-pmp
 # github.com/jezek/xgb v1.1.1
 ## explicit; go 1.11
 github.com/jezek/xgb
@@ -96,9 +90,6 @@ github.com/stretchr/testify/require
 # golang.org/x/exp v0.0.0-20240213143201-ec583247a57a
 ## explicit; go 1.20
 golang.org/x/exp/maps
-# golang.org/x/net v0.8.0
-## explicit; go 1.17
-golang.org/x/net/route
 # golang.org/x/sync v0.6.0
 ## explicit; go 1.18
 golang.org/x/sync/errgroup
@@ -109,6 +100,11 @@ golang.org/x/sys/windows
 # golang.org/x/time v0.5.0
 ## explicit; go 1.18
 golang.org/x/time/rate
+# golang.org/x/tour v0.1.0
+## explicit; go 1.16
+golang.org/x/tour/pic
+golang.org/x/tour/reader
+golang.org/x/tour/tree
 # gopkg.in/yaml.v3 v3.0.1
 ## explicit
 gopkg.in/yaml.v3
