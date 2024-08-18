@@ -10,6 +10,8 @@ import (
 )
 
 /*
+https://tip.golang.org/wiki/RangefuncExperiment
+
 Iterator functions used as range expressions:
 
 func(func() bool)
